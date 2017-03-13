@@ -126,10 +126,11 @@ int main(void) {
 						// TODO: Maybe some fallback for wrongly crafted messages?
 						enabled_sensors &= ~(1 << msg_rx.data[0]);
 						enabled_sensors |= msg_rx.data[1] << msg_rx.data[0];
+						send_response(root_id, enabled_sensors << 8);
 						break;
 					case 0x02: // fan control message
 						if (board != FAN_BOARD) {
-							// TODO: Send response FF
+							send_response(root_id, 0xff << 8);
 						};
 						break;
 					default:
@@ -153,6 +154,17 @@ int main(void) {
 			};
 		};
 	};
+};
+
+void send_response(uint32_t root_id, uint32_t response[8]) {
+	can_t msg_tx;
+	msg_tx.data = response;
+	msg_tx.id = root_id + 1; // Answer id is root_id + 1
+	msg_tx.flags.extended = 0;
+	msg_tx.flags.rtr = 0;
+	msg_tx.length = 8;
+
+	can_send_message(&msg_tx);
 };
 
 // Send the resistance of the temperature sensor over can
