@@ -1,0 +1,143 @@
+   1               		.file	"at90can_get_buf_message.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	can_get_message
+  12               	can_get_message:
+  13               	.LFB18:
+  14               		.file 1 "at90can_get_buf_message.c"
+   1:at90can_get_buf_message.c **** // ----------------------------------------------------------------------------
+   2:at90can_get_buf_message.c **** /*
+   3:at90can_get_buf_message.c ****  * Copyright (c) 2007 Fabian Greif, Roboterclub Aachen e.V.
+   4:at90can_get_buf_message.c ****  *  All rights reserved.
+   5:at90can_get_buf_message.c ****  *
+   6:at90can_get_buf_message.c ****  * Redistribution and use in source and binary forms, with or without
+   7:at90can_get_buf_message.c ****  * modification, are permitted provided that the following conditions
+   8:at90can_get_buf_message.c ****  * are met:
+   9:at90can_get_buf_message.c ****  * 1. Redistributions of source code must retain the above copyright
+  10:at90can_get_buf_message.c ****  *    notice, this list of conditions and the following disclaimer.
+  11:at90can_get_buf_message.c ****  * 2. Redistributions in binary form must reproduce the above copyright
+  12:at90can_get_buf_message.c ****  *    notice, this list of conditions and the following disclaimer in the
+  13:at90can_get_buf_message.c ****  *    documentation and/or other materials provided with the distribution.
+  14:at90can_get_buf_message.c ****  *
+  15:at90can_get_buf_message.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+  16:at90can_get_buf_message.c ****  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  17:at90can_get_buf_message.c ****  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  18:at90can_get_buf_message.c ****  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+  19:at90can_get_buf_message.c ****  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  20:at90can_get_buf_message.c ****  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+  21:at90can_get_buf_message.c ****  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  22:at90can_get_buf_message.c ****  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  23:at90can_get_buf_message.c ****  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+  24:at90can_get_buf_message.c ****  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  25:at90can_get_buf_message.c ****  * SUCH DAMAGE.
+  26:at90can_get_buf_message.c ****  *
+  27:at90can_get_buf_message.c ****  * $Id: at90can_get_buf_message.c 6837 2008-11-16 19:05:15Z fabian $
+  28:at90can_get_buf_message.c ****  */
+  29:at90can_get_buf_message.c **** // ----------------------------------------------------------------------------
+  30:at90can_get_buf_message.c **** 
+  31:at90can_get_buf_message.c **** #include "at90can_private.h"
+  32:at90can_get_buf_message.c **** #include <string.h>
+  33:at90can_get_buf_message.c **** 
+  34:at90can_get_buf_message.c **** #if defined(SUPPORT_FOR_AT90CAN__) && CAN_RX_BUFFER_SIZE > 0
+  35:at90can_get_buf_message.c **** 
+  36:at90can_get_buf_message.c **** // ----------------------------------------------------------------------------
+  37:at90can_get_buf_message.c **** uint8_t at90can_get_buffered_message(can_t *msg)
+  38:at90can_get_buf_message.c **** {
+  15               		.loc 1 38 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18 0000 CF93      		push r28
+  19               	.LCFI0:
+  20               		.cfi_def_cfa_offset 3
+  21               		.cfi_offset 28, -2
+  22 0002 DF93      		push r29
+  23               	.LCFI1:
+  24               		.cfi_def_cfa_offset 4
+  25               		.cfi_offset 29, -3
+  26               	/* prologue: function */
+  27               	/* frame size = 0 */
+  28               	/* stack size = 2 */
+  29               	.L__stack_usage = 2
+  30 0004 EC01      		movw r28,r24
+  39:at90can_get_buf_message.c **** 	// get pointer to the first buffered message
+  40:at90can_get_buf_message.c **** 	can_t *buf = can_buffer_get_dequeue_ptr(&can_rx_buffer);
+  31               		.loc 1 40 0
+  32 0006 80E0      		ldi r24,lo8(can_rx_buffer)
+  33 0008 90E0      		ldi r25,hi8(can_rx_buffer)
+  34               	.LVL1:
+  35 000a 0E94 0000 		call can_buffer_get_dequeue_ptr
+  36               	.LVL2:
+  37 000e FC01      		movw r30,r24
+  38               	.LVL3:
+  41:at90can_get_buf_message.c **** 	
+  42:at90can_get_buf_message.c **** 	if (buf == NULL)
+  39               		.loc 1 42 0
+  40 0010 0097      		sbiw r24,0
+  41 0012 01F0      		breq .L3
+  43:at90can_get_buf_message.c **** 		return 0;
+  44:at90can_get_buf_message.c **** 	
+  45:at90can_get_buf_message.c **** 	// copy the message
+  46:at90can_get_buf_message.c **** 	memcpy( msg, buf, sizeof(can_t) );
+  42               		.loc 1 46 0
+  43 0014 80E1      		ldi r24,lo8(16)
+  44               	.LVL4:
+  45 0016 DE01      		movw r26,r28
+  46               		0:
+  47 0018 0190      		ld r0,Z+
+  48 001a 0D92      		st X+,r0
+  49 001c 8A95      		dec r24
+  50 001e 01F4      		brne 0b
+  51               	.LVL5:
+  47:at90can_get_buf_message.c **** 	
+  48:at90can_get_buf_message.c **** 	// delete message from the queue
+  49:at90can_get_buf_message.c **** 	can_buffer_dequeue(&can_rx_buffer);
+  52               		.loc 1 49 0
+  53 0020 80E0      		ldi r24,lo8(can_rx_buffer)
+  54 0022 90E0      		ldi r25,hi8(can_rx_buffer)
+  55 0024 0E94 0000 		call can_buffer_dequeue
+  56               	.LVL6:
+  50:at90can_get_buf_message.c **** 	
+  51:at90can_get_buf_message.c **** 	return 0xff;
+  57               		.loc 1 51 0
+  58 0028 8FEF      		ldi r24,lo8(-1)
+  59 002a 00C0      		rjmp .L2
+  60               	.LVL7:
+  61               	.L3:
+  43:at90can_get_buf_message.c **** 		return 0;
+  62               		.loc 1 43 0
+  63 002c 80E0      		ldi r24,0
+  64               	.LVL8:
+  65               	.L2:
+  66               	/* epilogue start */
+  52:at90can_get_buf_message.c **** }
+  67               		.loc 1 52 0
+  68 002e DF91      		pop r29
+  69 0030 CF91      		pop r28
+  70               	.LVL9:
+  71 0032 0895      		ret
+  72               		.cfi_endproc
+  73               	.LFE18:
+  75               	.Letext0:
+  76               		.file 2 "/usr/lib/avr/include/stdint.h"
+  77               		.file 3 "can.h"
+  78               		.file 4 "can_buffer.h"
+  79               		.file 5 "at90can_private.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 at90can_get_buf_message.c
+     /tmp/ccXjsc4A.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccXjsc4A.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccXjsc4A.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccXjsc4A.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccXjsc4A.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccXjsc4A.s:12     .text:0000000000000000 can_get_message
+
+UNDEFINED SYMBOLS
+can_rx_buffer
+can_buffer_get_dequeue_ptr
+can_buffer_dequeue

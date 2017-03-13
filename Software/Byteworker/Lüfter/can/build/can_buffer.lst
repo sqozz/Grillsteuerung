@@ -1,0 +1,583 @@
+   1               		.file	"can_buffer.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	can_buffer_init
+  12               	can_buffer_init:
+  13               	.LFB16:
+  14               		.file 1 "can_buffer.c"
+   1:can_buffer.c  **** // -----------------------------------------------------------------------------
+   2:can_buffer.c  **** /*
+   3:can_buffer.c  ****  * Copyright (c) 2007 Fabian Greif, Roboterclub Aachen e.V.
+   4:can_buffer.c  ****  *  All rights reserved.
+   5:can_buffer.c  ****  *
+   6:can_buffer.c  ****  * Redistribution and use in source and binary forms, with or without
+   7:can_buffer.c  ****  * modification, are permitted provided that the following conditions
+   8:can_buffer.c  ****  * are met:
+   9:can_buffer.c  ****  * 1. Redistributions of source code must retain the above copyright
+  10:can_buffer.c  ****  *    notice, this list of conditions and the following disclaimer.
+  11:can_buffer.c  ****  * 2. Redistributions in binary form must reproduce the above copyright
+  12:can_buffer.c  ****  *    notice, this list of conditions and the following disclaimer in the
+  13:can_buffer.c  ****  *    documentation and/or other materials provided with the distribution.
+  14:can_buffer.c  ****  *
+  15:can_buffer.c  ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+  16:can_buffer.c  ****  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  17:can_buffer.c  ****  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  18:can_buffer.c  ****  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+  19:can_buffer.c  ****  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  20:can_buffer.c  ****  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+  21:can_buffer.c  ****  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  22:can_buffer.c  ****  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  23:can_buffer.c  ****  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+  24:can_buffer.c  ****  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  25:can_buffer.c  ****  * SUCH DAMAGE.
+  26:can_buffer.c  ****  *
+  27:can_buffer.c  ****  * $Id: can_buffer.c 6837 2008-11-16 19:05:15Z fabian $
+  28:can_buffer.c  ****  */
+  29:can_buffer.c  **** // -----------------------------------------------------------------------------
+  30:can_buffer.c  **** 
+  31:can_buffer.c  **** #include "can_private.h"
+  32:can_buffer.c  **** #include "can_buffer.h"
+  33:can_buffer.c  **** #include "utils.h"
+  34:can_buffer.c  **** 
+  35:can_buffer.c  **** #if CAN_RX_BUFFER_SIZE > 0 || CAN_TX_BUFFER_SIZE > 0
+  36:can_buffer.c  **** 
+  37:can_buffer.c  **** // -----------------------------------------------------------------------------
+  38:can_buffer.c  **** void can_buffer_init(can_buffer_t *buf, uint8_t size, can_t *list)
+  39:can_buffer.c  **** {
+  15               		.loc 1 39 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22 0000 FC01      		movw r30,r24
+  23               	.LBB27:
+  40:can_buffer.c  **** 	ENTER_CRITICAL_SECTION;
+  24               		.loc 1 40 0
+  25 0002 8FB7      		in r24,__SREG__
+  26               	.LVL1:
+  27               	.LBB28:
+  28               	.LBB29:
+  29               		.file 2 "/usr/lib/avr/include/util/atomic.h"
+   1:/usr/lib/avr/include/util/atomic.h **** /* Copyright (c) 2007 Dean Camera
+   2:/usr/lib/avr/include/util/atomic.h ****    All rights reserved.
+   3:/usr/lib/avr/include/util/atomic.h **** 
+   4:/usr/lib/avr/include/util/atomic.h ****    Redistribution and use in source and binary forms, with or without
+   5:/usr/lib/avr/include/util/atomic.h ****    modification, are permitted provided that the following conditions are met:
+   6:/usr/lib/avr/include/util/atomic.h **** 
+   7:/usr/lib/avr/include/util/atomic.h ****    * Redistributions of source code must retain the above copyright
+   8:/usr/lib/avr/include/util/atomic.h ****      notice, this list of conditions and the following disclaimer.
+   9:/usr/lib/avr/include/util/atomic.h **** 
+  10:/usr/lib/avr/include/util/atomic.h ****    * Redistributions in binary form must reproduce the above copyright
+  11:/usr/lib/avr/include/util/atomic.h ****      notice, this list of conditions and the following disclaimer in
+  12:/usr/lib/avr/include/util/atomic.h ****      the documentation and/or other materials provided with the
+  13:/usr/lib/avr/include/util/atomic.h ****      distribution.
+  14:/usr/lib/avr/include/util/atomic.h **** 
+  15:/usr/lib/avr/include/util/atomic.h ****    * Neither the name of the copyright holders nor the names of
+  16:/usr/lib/avr/include/util/atomic.h ****      contributors may be used to endorse or promote products derived
+  17:/usr/lib/avr/include/util/atomic.h ****      from this software without specific prior written permission.
+  18:/usr/lib/avr/include/util/atomic.h **** 
+  19:/usr/lib/avr/include/util/atomic.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  20:/usr/lib/avr/include/util/atomic.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  21:/usr/lib/avr/include/util/atomic.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  22:/usr/lib/avr/include/util/atomic.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  23:/usr/lib/avr/include/util/atomic.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  24:/usr/lib/avr/include/util/atomic.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  25:/usr/lib/avr/include/util/atomic.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  26:/usr/lib/avr/include/util/atomic.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  27:/usr/lib/avr/include/util/atomic.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  28:/usr/lib/avr/include/util/atomic.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  29:/usr/lib/avr/include/util/atomic.h ****   POSSIBILITY OF SUCH DAMAGE.
+  30:/usr/lib/avr/include/util/atomic.h **** */
+  31:/usr/lib/avr/include/util/atomic.h **** 
+  32:/usr/lib/avr/include/util/atomic.h **** /* $Id: atomic.h 2158 2010-06-10 15:48:28Z joerg_wunsch $ */
+  33:/usr/lib/avr/include/util/atomic.h **** 
+  34:/usr/lib/avr/include/util/atomic.h **** #ifndef _UTIL_ATOMIC_H_
+  35:/usr/lib/avr/include/util/atomic.h **** #define _UTIL_ATOMIC_H_ 1
+  36:/usr/lib/avr/include/util/atomic.h **** 
+  37:/usr/lib/avr/include/util/atomic.h **** #include <avr/io.h>
+  38:/usr/lib/avr/include/util/atomic.h **** #include <avr/interrupt.h>
+  39:/usr/lib/avr/include/util/atomic.h **** 
+  40:/usr/lib/avr/include/util/atomic.h **** #if !defined(__DOXYGEN__)
+  41:/usr/lib/avr/include/util/atomic.h **** /* Internal helper functions. */
+  42:/usr/lib/avr/include/util/atomic.h **** static __inline__ uint8_t __iSeiRetVal(void)
+  43:/usr/lib/avr/include/util/atomic.h **** {
+  44:/usr/lib/avr/include/util/atomic.h ****     sei();
+  45:/usr/lib/avr/include/util/atomic.h ****     return 1;
+  46:/usr/lib/avr/include/util/atomic.h **** }
+  47:/usr/lib/avr/include/util/atomic.h **** 
+  48:/usr/lib/avr/include/util/atomic.h **** static __inline__ uint8_t __iCliRetVal(void)
+  49:/usr/lib/avr/include/util/atomic.h **** {
+  50:/usr/lib/avr/include/util/atomic.h ****     cli();
+  30               		.loc 2 50 0
+  31               	/* #APP */
+  32               	 ;  50 "/usr/lib/avr/include/util/atomic.h" 1
+  33 0004 F894      		cli
+  34               	 ;  0 "" 2
+  35               	.LVL2:
+  36               	/* #NOAPP */
+  37               	.LBE29:
+  38               	.LBE28:
+  41:can_buffer.c  **** 	buf->size = size;
+  39               		.loc 1 41 0
+  40 0006 6283      		std Z+2,r22
+  42:can_buffer.c  **** 	buf->buf = list;
+  41               		.loc 1 42 0
+  42 0008 5183      		std Z+1,r21
+  43 000a 4083      		st Z,r20
+  43:can_buffer.c  **** 	
+  44:can_buffer.c  **** 	buf->head = 0;
+  44               		.loc 1 44 0
+  45 000c 1482      		std Z+4,__zero_reg__
+  45:can_buffer.c  **** 	buf->tail = 0;
+  46               		.loc 1 45 0
+  47 000e 1582      		std Z+5,__zero_reg__
+  46:can_buffer.c  **** 	buf->used = 0;
+  48               		.loc 1 46 0
+  49 0010 1382      		std Z+3,__zero_reg__
+  50               	.LVL3:
+  51               	.LBB30:
+  52               	.LBB31:
+  51:/usr/lib/avr/include/util/atomic.h ****     return 1;
+  52:/usr/lib/avr/include/util/atomic.h **** }
+  53:/usr/lib/avr/include/util/atomic.h **** 
+  54:/usr/lib/avr/include/util/atomic.h **** static __inline__ void __iSeiParam(const uint8_t *__s)
+  55:/usr/lib/avr/include/util/atomic.h **** {
+  56:/usr/lib/avr/include/util/atomic.h ****     sei();
+  57:/usr/lib/avr/include/util/atomic.h ****     __asm__ volatile ("" ::: "memory");
+  58:/usr/lib/avr/include/util/atomic.h ****     (void)__s;
+  59:/usr/lib/avr/include/util/atomic.h **** }
+  60:/usr/lib/avr/include/util/atomic.h **** 
+  61:/usr/lib/avr/include/util/atomic.h **** static __inline__ void __iCliParam(const uint8_t *__s)
+  62:/usr/lib/avr/include/util/atomic.h **** {
+  63:/usr/lib/avr/include/util/atomic.h ****     cli();
+  64:/usr/lib/avr/include/util/atomic.h ****     __asm__ volatile ("" ::: "memory");
+  65:/usr/lib/avr/include/util/atomic.h ****     (void)__s;
+  66:/usr/lib/avr/include/util/atomic.h **** }
+  67:/usr/lib/avr/include/util/atomic.h **** 
+  68:/usr/lib/avr/include/util/atomic.h **** static __inline__ void __iRestore(const  uint8_t *__s)
+  69:/usr/lib/avr/include/util/atomic.h **** {
+  70:/usr/lib/avr/include/util/atomic.h ****     SREG = *__s;
+  53               		.loc 2 70 0
+  54 0012 8FBF      		out __SREG__,r24
+  71:/usr/lib/avr/include/util/atomic.h ****     __asm__ volatile ("" ::: "memory");
+  55               		.loc 2 71 0
+  56 0014 0895      		ret
+  57               	.LBE31:
+  58               	.LBE30:
+  59               	.LBE27:
+  60               		.cfi_endproc
+  61               	.LFE16:
+  63               	.global	can_buffer_empty
+  65               	can_buffer_empty:
+  66               	.LFB17:
+  47:can_buffer.c  **** 	LEAVE_CRITICAL_SECTION;
+  48:can_buffer.c  **** }
+  49:can_buffer.c  **** 
+  50:can_buffer.c  **** // -----------------------------------------------------------------------------
+  51:can_buffer.c  **** bool can_buffer_empty(can_buffer_t *buf)
+  52:can_buffer.c  **** {
+  67               		.loc 1 52 0
+  68               		.cfi_startproc
+  69               	.LVL4:
+  70               	/* prologue: function */
+  71               	/* frame size = 0 */
+  72               	/* stack size = 0 */
+  73               	.L__stack_usage = 0
+  74               	.LBB32:
+  53:can_buffer.c  **** 	uint8_t used;
+  54:can_buffer.c  **** 	
+  55:can_buffer.c  **** 	ENTER_CRITICAL_SECTION;
+  75               		.loc 1 55 0
+  76 0016 2FB7      		in r18,__SREG__
+  77               	.LVL5:
+  78               	.LBB33:
+  79               	.LBB34:
+  50:/usr/lib/avr/include/util/atomic.h ****     cli();
+  80               		.loc 2 50 0
+  81               	/* #APP */
+  82               	 ;  50 "/usr/lib/avr/include/util/atomic.h" 1
+  83 0018 F894      		cli
+  84               	 ;  0 "" 2
+  85               	.LVL6:
+  86               	/* #NOAPP */
+  87               	.LBE34:
+  88               	.LBE33:
+  56:can_buffer.c  **** 	used = buf->used;
+  89               		.loc 1 56 0
+  90 001a FC01      		movw r30,r24
+  91 001c 9381      		ldd r25,Z+3
+  92               	.LVL7:
+  93               	.LBB35:
+  94               	.LBB36:
+  70:/usr/lib/avr/include/util/atomic.h ****     SREG = *__s;
+  95               		.loc 2 70 0
+  96 001e 2FBF      		out __SREG__,r18
+  97               		.loc 2 71 0
+  98               	.LBE36:
+  99               	.LBE35:
+ 100               	.LBE32:
+  57:can_buffer.c  **** 	LEAVE_CRITICAL_SECTION;
+  58:can_buffer.c  **** 	
+  59:can_buffer.c  **** 	if (used == 0)
+ 101               		.loc 1 59 0
+ 102 0020 81E0      		ldi r24,lo8(1)
+ 103               	.LVL8:
+ 104 0022 9111      		cpse r25,__zero_reg__
+ 105 0024 80E0      		ldi r24,0
+ 106               	.L3:
+  60:can_buffer.c  **** 		return true;
+  61:can_buffer.c  **** 	else
+  62:can_buffer.c  **** 		return false;
+  63:can_buffer.c  **** }
+ 107               		.loc 1 63 0
+ 108 0026 0895      		ret
+ 109               		.cfi_endproc
+ 110               	.LFE17:
+ 112               	.global	can_buffer_full
+ 114               	can_buffer_full:
+ 115               	.LFB18:
+  64:can_buffer.c  **** 
+  65:can_buffer.c  **** // -----------------------------------------------------------------------------
+  66:can_buffer.c  **** bool can_buffer_full(can_buffer_t *buf)
+  67:can_buffer.c  **** {
+ 116               		.loc 1 67 0
+ 117               		.cfi_startproc
+ 118               	.LVL9:
+ 119               	/* prologue: function */
+ 120               	/* frame size = 0 */
+ 121               	/* stack size = 0 */
+ 122               	.L__stack_usage = 0
+ 123               	.LBB37:
+  68:can_buffer.c  **** 	uint8_t used;
+  69:can_buffer.c  **** 	uint8_t size;
+  70:can_buffer.c  **** 	
+  71:can_buffer.c  **** 	ENTER_CRITICAL_SECTION;
+ 124               		.loc 1 71 0
+ 125 0028 3FB7      		in r19,__SREG__
+ 126               	.LVL10:
+ 127               	.LBB38:
+ 128               	.LBB39:
+  50:/usr/lib/avr/include/util/atomic.h ****     cli();
+ 129               		.loc 2 50 0
+ 130               	/* #APP */
+ 131               	 ;  50 "/usr/lib/avr/include/util/atomic.h" 1
+ 132 002a F894      		cli
+ 133               	 ;  0 "" 2
+ 134               	.LVL11:
+ 135               	/* #NOAPP */
+ 136               	.LBE39:
+ 137               	.LBE38:
+  72:can_buffer.c  **** 	used = buf->used;
+ 138               		.loc 1 72 0
+ 139 002c FC01      		movw r30,r24
+ 140 002e 2381      		ldd r18,Z+3
+ 141               	.LVL12:
+  73:can_buffer.c  **** 	size = buf->size;
+ 142               		.loc 1 73 0
+ 143 0030 9281      		ldd r25,Z+2
+ 144               	.LVL13:
+ 145               	.LBB40:
+ 146               	.LBB41:
+  70:/usr/lib/avr/include/util/atomic.h ****     SREG = *__s;
+ 147               		.loc 2 70 0
+ 148 0032 3FBF      		out __SREG__,r19
+ 149               		.loc 2 71 0
+ 150               	.LBE41:
+ 151               	.LBE40:
+ 152               	.LBE37:
+  74:can_buffer.c  **** 	LEAVE_CRITICAL_SECTION;
+  75:can_buffer.c  **** 	
+  76:can_buffer.c  **** 	if (used >= size)
+ 153               		.loc 1 76 0
+ 154 0034 81E0      		ldi r24,lo8(1)
+ 155               	.LVL14:
+ 156 0036 2917      		cp r18,r25
+ 157 0038 00F4      		brsh .L9
+ 158 003a 80E0      		ldi r24,0
+ 159               	.L9:
+  77:can_buffer.c  **** 		return true;
+  78:can_buffer.c  **** 	else
+  79:can_buffer.c  **** 		return false;
+  80:can_buffer.c  **** }
+ 160               		.loc 1 80 0
+ 161 003c 0895      		ret
+ 162               		.cfi_endproc
+ 163               	.LFE18:
+ 165               	.global	can_buffer_get_enqueue_ptr
+ 167               	can_buffer_get_enqueue_ptr:
+ 168               	.LFB19:
+  81:can_buffer.c  **** 
+  82:can_buffer.c  **** // -----------------------------------------------------------------------------
+  83:can_buffer.c  **** can_t *can_buffer_get_enqueue_ptr(can_buffer_t *buf)
+  84:can_buffer.c  **** {
+ 169               		.loc 1 84 0
+ 170               		.cfi_startproc
+ 171               	.LVL15:
+ 172 003e CF93      		push r28
+ 173               	.LCFI0:
+ 174               		.cfi_def_cfa_offset 3
+ 175               		.cfi_offset 28, -2
+ 176 0040 DF93      		push r29
+ 177               	.LCFI1:
+ 178               		.cfi_def_cfa_offset 4
+ 179               		.cfi_offset 29, -3
+ 180               	/* prologue: function */
+ 181               	/* frame size = 0 */
+ 182               	/* stack size = 2 */
+ 183               	.L__stack_usage = 2
+ 184 0042 EC01      		movw r28,r24
+  85:can_buffer.c  **** 	if (can_buffer_full( buf ))
+ 185               		.loc 1 85 0
+ 186 0044 0E94 0000 		call can_buffer_full
+ 187               	.LVL16:
+ 188 0048 8111      		cpse r24,__zero_reg__
+ 189 004a 00C0      		rjmp .L12
+  86:can_buffer.c  **** 		return NULL;
+  87:can_buffer.c  **** 	
+  88:can_buffer.c  **** 	return &buf->buf[buf->head];
+ 190               		.loc 1 88 0
+ 191 004c 2C81      		ldd r18,Y+4
+ 192 004e 8881      		ld r24,Y
+ 193 0050 9981      		ldd r25,Y+1
+ 194 0052 30E1      		ldi r19,lo8(16)
+ 195 0054 239F      		mul r18,r19
+ 196 0056 800D      		add r24,r0
+ 197 0058 911D      		adc r25,r1
+ 198 005a 1124      		clr __zero_reg__
+ 199 005c 00C0      		rjmp .L11
+ 200               	.L12:
+  86:can_buffer.c  **** 		return NULL;
+ 201               		.loc 1 86 0
+ 202 005e 80E0      		ldi r24,0
+ 203 0060 90E0      		ldi r25,0
+ 204               	.L11:
+ 205               	/* epilogue start */
+  89:can_buffer.c  **** }
+ 206               		.loc 1 89 0
+ 207 0062 DF91      		pop r29
+ 208 0064 CF91      		pop r28
+ 209               	.LVL17:
+ 210 0066 0895      		ret
+ 211               		.cfi_endproc
+ 212               	.LFE19:
+ 214               	.global	can_buffer_enqueue
+ 216               	can_buffer_enqueue:
+ 217               	.LFB20:
+  90:can_buffer.c  **** 
+  91:can_buffer.c  **** // -----------------------------------------------------------------------------
+  92:can_buffer.c  **** void can_buffer_enqueue(can_buffer_t *buf)
+  93:can_buffer.c  **** {
+ 218               		.loc 1 93 0
+ 219               		.cfi_startproc
+ 220               	.LVL18:
+ 221               	/* prologue: function */
+ 222               	/* frame size = 0 */
+ 223               	/* stack size = 0 */
+ 224               	.L__stack_usage = 0
+ 225 0068 FC01      		movw r30,r24
+ 226               	.LBB42:
+  94:can_buffer.c  **** 	ENTER_CRITICAL_SECTION;
+ 227               		.loc 1 94 0
+ 228 006a 9FB7      		in r25,__SREG__
+ 229               	.LVL19:
+ 230               	.LBB43:
+ 231               	.LBB44:
+  50:/usr/lib/avr/include/util/atomic.h ****     cli();
+ 232               		.loc 2 50 0
+ 233               	/* #APP */
+ 234               	 ;  50 "/usr/lib/avr/include/util/atomic.h" 1
+ 235 006c F894      		cli
+ 236               	 ;  0 "" 2
+ 237               	.LVL20:
+ 238               	/* #NOAPP */
+ 239               	.LBE44:
+ 240               	.LBE43:
+  95:can_buffer.c  **** 	buf->used ++;
+ 241               		.loc 1 95 0
+ 242 006e 8381      		ldd r24,Z+3
+ 243               	.LVL21:
+ 244 0070 8F5F      		subi r24,lo8(-(1))
+ 245 0072 8383      		std Z+3,r24
+  96:can_buffer.c  **** 	if (++buf->head >= buf->size)
+ 246               		.loc 1 96 0
+ 247 0074 8481      		ldd r24,Z+4
+ 248 0076 8F5F      		subi r24,lo8(-(1))
+ 249 0078 8483      		std Z+4,r24
+ 250 007a 2281      		ldd r18,Z+2
+ 251 007c 8217      		cp r24,r18
+ 252 007e 00F4      		brsh .L14
+ 253               	.LVL22:
+ 254               	.L15:
+ 255               	.LBB45:
+ 256               	.LBB46:
+  70:/usr/lib/avr/include/util/atomic.h ****     SREG = *__s;
+ 257               		.loc 2 70 0
+ 258 0080 9FBF      		out __SREG__,r25
+ 259               		.loc 2 71 0
+ 260 0082 0895      		ret
+ 261               	.LVL23:
+ 262               	.L14:
+ 263               	.LBE46:
+ 264               	.LBE45:
+  97:can_buffer.c  **** 		buf->head = 0;
+ 265               		.loc 1 97 0
+ 266 0084 1482      		std Z+4,__zero_reg__
+ 267               	.LVL24:
+ 268 0086 00C0      		rjmp .L15
+ 269               	.LBE42:
+ 270               		.cfi_endproc
+ 271               	.LFE20:
+ 273               	.global	can_buffer_get_dequeue_ptr
+ 275               	can_buffer_get_dequeue_ptr:
+ 276               	.LFB21:
+  98:can_buffer.c  **** 	LEAVE_CRITICAL_SECTION;
+  99:can_buffer.c  **** }
+ 100:can_buffer.c  **** 
+ 101:can_buffer.c  **** // -----------------------------------------------------------------------------
+ 102:can_buffer.c  **** can_t *can_buffer_get_dequeue_ptr(can_buffer_t *buf)
+ 103:can_buffer.c  **** {
+ 277               		.loc 1 103 0
+ 278               		.cfi_startproc
+ 279               	.LVL25:
+ 280 0088 CF93      		push r28
+ 281               	.LCFI2:
+ 282               		.cfi_def_cfa_offset 3
+ 283               		.cfi_offset 28, -2
+ 284 008a DF93      		push r29
+ 285               	.LCFI3:
+ 286               		.cfi_def_cfa_offset 4
+ 287               		.cfi_offset 29, -3
+ 288               	/* prologue: function */
+ 289               	/* frame size = 0 */
+ 290               	/* stack size = 2 */
+ 291               	.L__stack_usage = 2
+ 292 008c EC01      		movw r28,r24
+ 104:can_buffer.c  **** 	if (can_buffer_empty( buf ))
+ 293               		.loc 1 104 0
+ 294 008e 0E94 0000 		call can_buffer_empty
+ 295               	.LVL26:
+ 296 0092 8111      		cpse r24,__zero_reg__
+ 297 0094 00C0      		rjmp .L19
+ 105:can_buffer.c  **** 		return NULL;
+ 106:can_buffer.c  **** 	
+ 107:can_buffer.c  **** 	return &buf->buf[buf->tail];
+ 298               		.loc 1 107 0
+ 299 0096 2D81      		ldd r18,Y+5
+ 300 0098 8881      		ld r24,Y
+ 301 009a 9981      		ldd r25,Y+1
+ 302 009c 30E1      		ldi r19,lo8(16)
+ 303 009e 239F      		mul r18,r19
+ 304 00a0 800D      		add r24,r0
+ 305 00a2 911D      		adc r25,r1
+ 306 00a4 1124      		clr __zero_reg__
+ 307 00a6 00C0      		rjmp .L18
+ 308               	.L19:
+ 105:can_buffer.c  **** 		return NULL;
+ 309               		.loc 1 105 0
+ 310 00a8 80E0      		ldi r24,0
+ 311 00aa 90E0      		ldi r25,0
+ 312               	.L18:
+ 313               	/* epilogue start */
+ 108:can_buffer.c  **** }
+ 314               		.loc 1 108 0
+ 315 00ac DF91      		pop r29
+ 316 00ae CF91      		pop r28
+ 317               	.LVL27:
+ 318 00b0 0895      		ret
+ 319               		.cfi_endproc
+ 320               	.LFE21:
+ 322               	.global	can_buffer_dequeue
+ 324               	can_buffer_dequeue:
+ 325               	.LFB22:
+ 109:can_buffer.c  **** 
+ 110:can_buffer.c  **** // -----------------------------------------------------------------------------
+ 111:can_buffer.c  **** void can_buffer_dequeue(can_buffer_t *buf)
+ 112:can_buffer.c  **** {
+ 326               		.loc 1 112 0
+ 327               		.cfi_startproc
+ 328               	.LVL28:
+ 329               	/* prologue: function */
+ 330               	/* frame size = 0 */
+ 331               	/* stack size = 0 */
+ 332               	.L__stack_usage = 0
+ 333 00b2 FC01      		movw r30,r24
+ 334               	.LBB47:
+ 113:can_buffer.c  **** 	ENTER_CRITICAL_SECTION;
+ 335               		.loc 1 113 0
+ 336 00b4 9FB7      		in r25,__SREG__
+ 337               	.LVL29:
+ 338               	.LBB48:
+ 339               	.LBB49:
+  50:/usr/lib/avr/include/util/atomic.h ****     cli();
+ 340               		.loc 2 50 0
+ 341               	/* #APP */
+ 342               	 ;  50 "/usr/lib/avr/include/util/atomic.h" 1
+ 343 00b6 F894      		cli
+ 344               	 ;  0 "" 2
+ 345               	.LVL30:
+ 346               	/* #NOAPP */
+ 347               	.LBE49:
+ 348               	.LBE48:
+ 114:can_buffer.c  **** 	buf->used --;
+ 349               		.loc 1 114 0
+ 350 00b8 8381      		ldd r24,Z+3
+ 351               	.LVL31:
+ 352 00ba 8150      		subi r24,lo8(-(-1))
+ 353 00bc 8383      		std Z+3,r24
+ 115:can_buffer.c  **** 	if (++buf->tail >= buf->size)
+ 354               		.loc 1 115 0
+ 355 00be 8581      		ldd r24,Z+5
+ 356 00c0 8F5F      		subi r24,lo8(-(1))
+ 357 00c2 8583      		std Z+5,r24
+ 358 00c4 2281      		ldd r18,Z+2
+ 359 00c6 8217      		cp r24,r18
+ 360 00c8 00F4      		brsh .L21
+ 361               	.LVL32:
+ 362               	.L22:
+ 363               	.LBB50:
+ 364               	.LBB51:
+  70:/usr/lib/avr/include/util/atomic.h ****     SREG = *__s;
+ 365               		.loc 2 70 0
+ 366 00ca 9FBF      		out __SREG__,r25
+ 367               		.loc 2 71 0
+ 368 00cc 0895      		ret
+ 369               	.LVL33:
+ 370               	.L21:
+ 371               	.LBE51:
+ 372               	.LBE50:
+ 116:can_buffer.c  **** 		buf->tail = 0;
+ 373               		.loc 1 116 0
+ 374 00ce 1582      		std Z+5,__zero_reg__
+ 375               	.LVL34:
+ 376 00d0 00C0      		rjmp .L22
+ 377               	.LBE47:
+ 378               		.cfi_endproc
+ 379               	.LFE22:
+ 381               	.Letext0:
+ 382               		.file 3 "/usr/lib/avr/include/stdint.h"
+ 383               		.file 4 "can.h"
+ 384               		.file 5 "can_buffer.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 can_buffer.c
+     /tmp/ccLU15aT.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccLU15aT.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccLU15aT.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccLU15aT.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccLU15aT.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccLU15aT.s:12     .text:0000000000000000 can_buffer_init
+     /tmp/ccLU15aT.s:65     .text:0000000000000016 can_buffer_empty
+     /tmp/ccLU15aT.s:114    .text:0000000000000028 can_buffer_full
+     /tmp/ccLU15aT.s:167    .text:000000000000003e can_buffer_get_enqueue_ptr
+     /tmp/ccLU15aT.s:216    .text:0000000000000068 can_buffer_enqueue
+     /tmp/ccLU15aT.s:275    .text:0000000000000088 can_buffer_get_dequeue_ptr
+     /tmp/ccLU15aT.s:324    .text:00000000000000b2 can_buffer_dequeue
+
+NO UNDEFINED SYMBOLS

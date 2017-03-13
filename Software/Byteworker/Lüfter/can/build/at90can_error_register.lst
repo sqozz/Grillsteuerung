@@ -1,0 +1,85 @@
+   1               		.file	"at90can_error_register.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	can_read_error_register
+  12               	can_read_error_register:
+  13               	.LFB18:
+  14               		.file 1 "at90can_error_register.c"
+   1:at90can_error_register.c **** // ----------------------------------------------------------------------------
+   2:at90can_error_register.c **** /*
+   3:at90can_error_register.c ****  * Copyright (c) 2007 Fabian Greif, Roboterclub Aachen e.V.
+   4:at90can_error_register.c ****  *  All rights reserved.
+   5:at90can_error_register.c ****  *
+   6:at90can_error_register.c ****  * Redistribution and use in source and binary forms, with or without
+   7:at90can_error_register.c ****  * modification, are permitted provided that the following conditions
+   8:at90can_error_register.c ****  * are met:
+   9:at90can_error_register.c ****  * 1. Redistributions of source code must retain the above copyright
+  10:at90can_error_register.c ****  *    notice, this list of conditions and the following disclaimer.
+  11:at90can_error_register.c ****  * 2. Redistributions in binary form must reproduce the above copyright
+  12:at90can_error_register.c ****  *    notice, this list of conditions and the following disclaimer in the
+  13:at90can_error_register.c ****  *    documentation and/or other materials provided with the distribution.
+  14:at90can_error_register.c ****  *
+  15:at90can_error_register.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+  16:at90can_error_register.c ****  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  17:at90can_error_register.c ****  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  18:at90can_error_register.c ****  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+  19:at90can_error_register.c ****  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  20:at90can_error_register.c ****  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+  21:at90can_error_register.c ****  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  22:at90can_error_register.c ****  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  23:at90can_error_register.c ****  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+  24:at90can_error_register.c ****  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  25:at90can_error_register.c ****  * SUCH DAMAGE.
+  26:at90can_error_register.c ****  *
+  27:at90can_error_register.c ****  * $Id: at90can_error_register.c 6837 2008-11-16 19:05:15Z fabian $
+  28:at90can_error_register.c ****  */
+  29:at90can_error_register.c **** // ----------------------------------------------------------------------------
+  30:at90can_error_register.c **** 
+  31:at90can_error_register.c **** #include "at90can_private.h"
+  32:at90can_error_register.c **** #ifdef	SUPPORT_FOR_AT90CAN__
+  33:at90can_error_register.c **** 
+  34:at90can_error_register.c **** // ----------------------------------------------------------------------------
+  35:at90can_error_register.c **** can_error_register_t at90can_read_error_register(void)
+  36:at90can_error_register.c **** {
+  15               		.loc 1 36 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  37:at90can_error_register.c **** 	can_error_register_t error;
+  38:at90can_error_register.c **** 	
+  39:at90can_error_register.c **** 	error.tx = CANTEC;
+  21               		.loc 1 39 0
+  22 0000 9091 EA00 		lds r25,234
+  23               	.LVL0:
+  40:at90can_error_register.c **** 	error.rx = CANREC;
+  24               		.loc 1 40 0
+  25 0004 8091 EB00 		lds r24,235
+  26               	.LVL1:
+  41:at90can_error_register.c **** 	
+  42:at90can_error_register.c **** 	return error;
+  43:at90can_error_register.c **** }
+  27               		.loc 1 43 0
+  28 0008 0895      		ret
+  29               		.cfi_endproc
+  30               	.LFE18:
+  32               	.Letext0:
+  33               		.file 2 "can.h"
+  34               		.file 3 "/usr/lib/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 at90can_error_register.c
+     /tmp/ccvN6oaC.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccvN6oaC.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccvN6oaC.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccvN6oaC.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccvN6oaC.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccvN6oaC.s:12     .text:0000000000000000 can_read_error_register
+
+NO UNDEFINED SYMBOLS
