@@ -30,7 +30,8 @@ int main(void) {
 	sei();
 
 	uint8_t syned = 0;
-	uint32_t stored_id = read_stored_id()
+	uint32_t stored_id = read_stored_id();
+	uint32_t root_id = stored_id;
 
 	if (old_id == -1) {
 		synced = false;
@@ -65,7 +66,7 @@ int main(void) {
 				if (board == PROBE_BOARD) { // This is a board with sensors connected
 					for (uint8_t i = 0; i < 6; i++) {
 						if ((1 << (i + 1)) & enabled_sensors) {
-							send_resistor_value(i);
+							send_resistor_value(i, root_id);
 						};
 					};
 				} else if (board == FAN_BOARD) { // This is a board to controll the fan with
@@ -92,8 +93,7 @@ int main(void) {
 				root_id = request_root_id();
 				timer_wait(200);
 				if (synced) {
-					persist_id(uint32_t board_id);
-					synced = true;
+					persist_id(uint32_t root_id);
 					// Sync was sucessfull
 					// TODO: stop the blinking LED to inform the user
 					// maybe switch on a second one?
@@ -111,6 +111,31 @@ int main(void) {
 		// Receive can message if any in msg_rx buffer
 		// TODO: add dynamic CAN ids
 		while (can_get_message(&msg_rx)) {
+			if (msg_rx.id == root_id) {
+				command = msg_rx.data[7]; // MSB contains the command to execute
+				switch (command) {
+					case 0x00: // soft reset command
+						soft_reset();
+						break;
+					case 0x01: // enable/disable channel command
+						// TODO: Make this a function
+						// What we expect is a message like this:
+						// 1234#0x0y
+						// where x is the probe number to acces
+						// and   y is either 1 to enable or 0 disable the probe
+						// TODO: Maybe some fallback for wrongly crafted messages?
+						enabled_sensors &= ~(1 << msg_rx.data[0]);
+						enabled_sensors |= msg_rx.data[1] << msg_rx.data[0];
+						break;
+					case 0x02: // fan control message
+						if (board != FAN_BOARD) {
+							// TODO: Send response FF
+						};
+						break;
+					default:
+						break;
+				}
+			};
 			if (msg_rx.id == 0x1337) { // Reset message to get µC into the can bootloader
 				soft_reset();
 			};
@@ -133,7 +158,7 @@ int main(void) {
 // Send the resistance of the temperature sensor over can
 void send_resistor_value(uint8_t sensor, uint32_t root_id) {
 	can_t msg_tx;
-	msg_tx.id = root_id + sensor;
+	msg_tx.id = root_id + sensor + 1; // Sensor start at 0. +1 makes sure to never send on the root_id
 	msg_tx.flags.extended = 0;
 	msg_tx.flags.rtr = 0;
 	msg_tx.length = 4;
@@ -154,19 +179,25 @@ void send_resistor_value(uint8_t sensor, uint32_t root_id) {
 }
 
 void persist_id(uint32_t board_id) {
-	// TODO: store board_id somewhere
+	// TODO: Store board_id somewhere
 }
 
 uint32_t read_stored_id(void) {
-	// return oldId if stored somewhere
+	// Return oldId if stored somewhere
 	// TODO: store this value somewhere
 	return -1 // no id stored - request new one
 }
 
 uint8_t sync_button_pressed(void) {
-	// return true if button is pressed
-	// TODO implement readout of button
+	// Return true if button is pressed
+	// TODO Implement readout of button
 	return false
+}
+
+uint32_t request_root_id(void) {
+	uint32_t requested_id = 0x00;
+	// TODO: Implement actual can code to send a request message to master
+	return requested_id
 }
 
 // code for probe boards
