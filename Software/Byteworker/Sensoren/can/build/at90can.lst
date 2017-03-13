@@ -1,0 +1,938 @@
+   1               		.file	"at90can.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_find_free_mob
+  12               	_find_free_mob:
+  13               	.LFB18:
+  14               		.file 1 "at90can.c"
+   1:at90can.c     **** // ----------------------------------------------------------------------------
+   2:at90can.c     **** /*
+   3:at90can.c     ****  * Copyright (c) 2007 Fabian Greif, Roboterclub Aachen e.V.
+   4:at90can.c     ****  *  All rights reserved.
+   5:at90can.c     ****  *
+   6:at90can.c     ****  * Redistribution and use in source and binary forms, with or without
+   7:at90can.c     ****  * modification, are permitted provided that the following conditions
+   8:at90can.c     ****  * are met:
+   9:at90can.c     ****  * 1. Redistributions of source code must retain the above copyright
+  10:at90can.c     ****  *    notice, this list of conditions and the following disclaimer.
+  11:at90can.c     ****  * 2. Redistributions in binary form must reproduce the above copyright
+  12:at90can.c     ****  *    notice, this list of conditions and the following disclaimer in the
+  13:at90can.c     ****  *    documentation and/or other materials provided with the distribution.
+  14:at90can.c     ****  *
+  15:at90can.c     ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+  16:at90can.c     ****  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  17:at90can.c     ****  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  18:at90can.c     ****  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+  19:at90can.c     ****  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  20:at90can.c     ****  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+  21:at90can.c     ****  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  22:at90can.c     ****  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  23:at90can.c     ****  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+  24:at90can.c     ****  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  25:at90can.c     ****  * SUCH DAMAGE.
+  26:at90can.c     ****  *
+  27:at90can.c     ****  * $Id: at90can.c 7538 2009-04-16 13:07:33Z fabian $
+  28:at90can.c     ****  */
+  29:at90can.c     **** // ----------------------------------------------------------------------------
+  30:at90can.c     **** 
+  31:at90can.c     **** #include "at90can_private.h"
+  32:at90can.c     **** #ifdef	SUPPORT_FOR_AT90CAN__
+  33:at90can.c     **** 
+  34:at90can.c     **** #include <avr/pgmspace.h>
+  35:at90can.c     **** #include "can_buffer.h"
+  36:at90can.c     **** 
+  37:at90can.c     **** // ----------------------------------------------------------------------------
+  38:at90can.c     **** 
+  39:at90can.c     **** 
+  40:at90can.c     **** #if (F_CPU == 16000000UL)
+  41:at90can.c     **** 	const char PROGMEM _at90can_cnf[8][3] = {
+  42:at90can.c     **** 		// 10 kbps
+  43:at90can.c     **** 		{	0x7E,
+  44:at90can.c     **** 			0x6E,
+  45:at90can.c     **** 			0x7F
+  46:at90can.c     **** 		},
+  47:at90can.c     **** 		// 20 kbps
+  48:at90can.c     **** 		{	0x62,
+  49:at90can.c     **** 			0x0C,
+  50:at90can.c     **** 			0x37
+  51:at90can.c     **** 		},
+  52:at90can.c     **** 		// 50 kbps
+  53:at90can.c     **** 		{	0x26,
+  54:at90can.c     **** 			0x0C,
+  55:at90can.c     **** 			0x37
+  56:at90can.c     **** 		},
+  57:at90can.c     **** 		// 100 kbps
+  58:at90can.c     **** 		{	0x12,
+  59:at90can.c     **** 			0x0C,
+  60:at90can.c     **** 			0x37
+  61:at90can.c     **** 		},
+  62:at90can.c     **** 		// 125 kbps
+  63:at90can.c     **** 		{	0x0E,
+  64:at90can.c     **** 			0x0C,
+  65:at90can.c     **** 			0x37
+  66:at90can.c     **** 		},
+  67:at90can.c     **** 		// 250 kbps
+  68:at90can.c     **** 		{	0x06,
+  69:at90can.c     **** 			0x0C,
+  70:at90can.c     **** 			0x37
+  71:at90can.c     **** 		},
+  72:at90can.c     **** 		// 500 kbps
+  73:at90can.c     **** 		{	0x02,
+  74:at90can.c     **** 			0x0C,
+  75:at90can.c     **** 			0x37
+  76:at90can.c     **** 		},
+  77:at90can.c     **** 		// 1 Mbps
+  78:at90can.c     **** 		{	0x00,
+  79:at90can.c     **** 			0x0C,
+  80:at90can.c     **** 			0x36
+  81:at90can.c     **** 		}
+  82:at90can.c     **** 	};
+  83:at90can.c     **** #endif
+  84:at90can.c     **** 
+  85:at90can.c     **** #if (F_CPU == 8000000UL)
+  86:at90can.c     **** 	prog_char _at90can_cnf[8][3] = {
+  87:at90can.c     **** 		// 10 kbps, FIXME! wrong
+  88:at90can.c     **** 		{	0x7E,
+  89:at90can.c     **** 			0x6E,
+  90:at90can.c     **** 			0x7F
+  91:at90can.c     **** 		},
+  92:at90can.c     **** 		// 20 kbps, FIXME! wrong
+  93:at90can.c     **** 		{	0x62,
+  94:at90can.c     **** 			0x0C,
+  95:at90can.c     **** 			0x37
+  96:at90can.c     **** 		},
+  97:at90can.c     **** 		// 50 kbps, FIXME! wrong
+  98:at90can.c     **** 		{	0x26,
+  99:at90can.c     **** 			0x0C,
+ 100:at90can.c     **** 			0x37
+ 101:at90can.c     **** 		},
+ 102:at90can.c     **** 		// 100 kbps
+ 103:at90can.c     **** 		{	0x08,
+ 104:at90can.c     **** 			0x0C,
+ 105:at90can.c     **** 			0x37
+ 106:at90can.c     **** 		},
+ 107:at90can.c     **** 		// 125 kbps
+ 108:at90can.c     **** 		{	0x06,
+ 109:at90can.c     **** 			0x0C,
+ 110:at90can.c     **** 			0x37
+ 111:at90can.c     **** 		},
+ 112:at90can.c     **** 		// 250 kbps
+ 113:at90can.c     **** 		{	0x02,
+ 114:at90can.c     **** 			0x0C,
+ 115:at90can.c     **** 			0x37
+ 116:at90can.c     **** 		},
+ 117:at90can.c     **** 		// 500 kbps
+ 118:at90can.c     **** 		{	0x00,
+ 119:at90can.c     **** 			0x0C,
+ 120:at90can.c     **** 			0x36
+ 121:at90can.c     **** 		},
+ 122:at90can.c     **** 		// 1 Mbps
+ 123:at90can.c     **** 		{	0x00,
+ 124:at90can.c     **** 			0x04,
+ 125:at90can.c     **** 			0x12
+ 126:at90can.c     **** 		}
+ 127:at90can.c     **** 	};
+ 128:at90can.c     **** #endif
+ 129:at90can.c     **** 
+ 130:at90can.c     **** #if (F_CPU == 4000000UL)
+ 131:at90can.c     **** 	prog_char _at90can_cnf[8][3] = {
+ 132:at90can.c     **** 		// 10 kbps, FIXME! wrong
+ 133:at90can.c     **** 		{	0x7E,
+ 134:at90can.c     **** 			0x6E,
+ 135:at90can.c     **** 			0x7F
+ 136:at90can.c     **** 		},
+ 137:at90can.c     **** 		// 20 kbps, FIXME! wrong
+ 138:at90can.c     **** 		{	0x62,
+ 139:at90can.c     **** 			0x0C,
+ 140:at90can.c     **** 			0x37
+ 141:at90can.c     **** 		},
+ 142:at90can.c     **** 		// 50 kbps, FIXME! wrong
+ 143:at90can.c     **** 		{	0x26,
+ 144:at90can.c     **** 			0x0C,
+ 145:at90can.c     **** 			0x37
+ 146:at90can.c     **** 		},
+ 147:at90can.c     **** 		// 100 kbps
+ 148:at90can.c     **** 		{	0x08,
+ 149:at90can.c     **** 			0x04,
+ 150:at90can.c     **** 			0x13
+ 151:at90can.c     **** 		},
+ 152:at90can.c     **** 		// 125 kbps
+ 153:at90can.c     **** 		{	0x02,
+ 154:at90can.c     **** 			0x0E,
+ 155:at90can.c     **** 			0x4B
+ 156:at90can.c     **** 		},
+ 157:at90can.c     **** 		// 250 kbps
+ 158:at90can.c     **** 		{	0x02,
+ 159:at90can.c     **** 			0x04,
+ 160:at90can.c     **** 			0x13
+ 161:at90can.c     **** 		},
+ 162:at90can.c     **** 		// 500 kbps
+ 163:at90can.c     **** 		{	0x00,
+ 164:at90can.c     **** 			0x04,
+ 165:at90can.c     **** 			0x12
+ 166:at90can.c     **** 		},
+ 167:at90can.c     **** 		// 1 Mbps // FIXME impossible
+ 168:at90can.c     **** 		{	0x00,
+ 169:at90can.c     **** 			0x00,
+ 170:at90can.c     **** 			0x00
+ 171:at90can.c     **** 		}
+ 172:at90can.c     **** 	};
+ 173:at90can.c     **** #endif
+ 174:at90can.c     **** 
+ 175:at90can.c     **** 
+ 176:at90can.c     **** // ----------------------------------------------------------------------------
+ 177:at90can.c     **** 
+ 178:at90can.c     **** #if CAN_RX_BUFFER_SIZE > 0
+ 179:at90can.c     **** can_buffer_t can_rx_buffer;
+ 180:at90can.c     **** can_t can_rx_list[CAN_RX_BUFFER_SIZE];
+ 181:at90can.c     **** #else
+ 182:at90can.c     **** volatile uint8_t _messages_waiting;
+ 183:at90can.c     **** #endif
+ 184:at90can.c     **** 
+ 185:at90can.c     **** #if CAN_TX_BUFFER_SIZE > 0
+ 186:at90can.c     **** can_buffer_t can_tx_buffer;
+ 187:at90can.c     **** can_t can_tx_list[CAN_TX_BUFFER_SIZE];
+ 188:at90can.c     **** 
+ 189:at90can.c     **** volatile uint8_t _transmission_in_progress = 0;
+ 190:at90can.c     **** #else
+ 191:at90can.c     **** volatile uint8_t _free_buffer;			//!< Stores the numer of currently free MObs
+ 192:at90can.c     **** #endif
+ 193:at90can.c     **** 
+ 194:at90can.c     **** // ----------------------------------------------------------------------------
+ 195:at90can.c     **** // get next free MOb
+ 196:at90can.c     **** 
+ 197:at90can.c     **** uint8_t _find_free_mob(void)
+ 198:at90can.c     **** {
+  15               		.loc 1 198 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+ 199:at90can.c     **** 	#if CAN_TX_BUFFER_SIZE == 0
+ 200:at90can.c     **** 	if (_free_buffer == 0)
+  21               		.loc 1 200 0
+  22 0000 8091 0000 		lds r24,_free_buffer
+  23 0004 8111      		cpse r24,__zero_reg__
+  24 0006 00C0      		rjmp .L2
+  25               	.L4:
+ 201:at90can.c     **** 		return 0xff;
+  26               		.loc 1 201 0
+  27 0008 8FEF      		ldi r24,lo8(-1)
+  28 000a 0895      		ret
+  29               	.L2:
+ 200:at90can.c     **** 	if (_free_buffer == 0)
+  30               		.loc 1 200 0
+  31 000c 80E0      		ldi r24,0
+  32               	.L5:
+  33               	.LVL0:
+ 202:at90can.c     **** 	#elif CAN_FORCE_TX_ORDER
+ 203:at90can.c     **** 	if (_transmission_in_progress)
+ 204:at90can.c     **** 		return 0xff;
+ 205:at90can.c     **** 	#endif
+ 206:at90can.c     **** 	
+ 207:at90can.c     **** 	uint8_t i;
+ 208:at90can.c     **** 	for (i = 0;i < MESSAGE_OBJECTS;i++)
+ 209:at90can.c     **** 	{
+ 210:at90can.c     **** 		// load MOb page
+ 211:at90can.c     **** 		CANPAGE = i << 4;
+  34               		.loc 1 211 0
+  35 000e 982F      		mov r25,r24
+  36 0010 9295      		swap r25
+  37 0012 907F      		andi r25,lo8(-16)
+  38 0014 9093 ED00 		sts 237,r25
+ 212:at90can.c     **** 		
+ 213:at90can.c     **** 		// check if MOb is in use
+ 214:at90can.c     **** 		if ((CANCDMOB & ((1 << CONMOB1) | (1 << CONMOB0))) == 0)
+  39               		.loc 1 214 0
+  40 0018 9091 EF00 		lds r25,239
+  41 001c 907C      		andi r25,lo8(-64)
+  42 001e 01F0      		breq .L3
+ 208:at90can.c     **** 	for (i = 0;i < MESSAGE_OBJECTS;i++)
+  43               		.loc 1 208 0
+  44 0020 8F5F      		subi r24,lo8(-(1))
+  45               	.LVL1:
+  46 0022 8630      		cpi r24,lo8(6)
+  47 0024 01F4      		brne .L5
+  48 0026 00C0      		rjmp .L4
+  49               	.L3:
+ 215:at90can.c     **** 			return i;
+ 216:at90can.c     **** 	}
+ 217:at90can.c     **** 	
+ 218:at90can.c     **** 	return 0xff;
+ 219:at90can.c     **** }
+  50               		.loc 1 219 0
+  51 0028 0895      		ret
+  52               		.cfi_endproc
+  53               	.LFE18:
+  55               	.global	_disable_mob_interrupt
+  57               	_disable_mob_interrupt:
+  58               	.LFB19:
+ 220:at90can.c     **** 
+ 221:at90can.c     **** // ----------------------------------------------------------------------------
+ 222:at90can.c     **** // disable interrupt of corresponding MOb
+ 223:at90can.c     **** 
+ 224:at90can.c     **** void _disable_mob_interrupt(uint8_t mob)
+ 225:at90can.c     **** {
+  59               		.loc 1 225 0
+  60               		.cfi_startproc
+  61               	.LVL2:
+  62               	/* prologue: function */
+  63               	/* frame size = 0 */
+  64               	/* stack size = 0 */
+  65               	.L__stack_usage = 0
+ 226:at90can.c     **** 	if (mob < 8)
+  66               		.loc 1 226 0
+  67 002a 8830      		cpi r24,lo8(8)
+  68 002c 00F4      		brsh .L12
+ 227:at90can.c     **** 		CANIE2 &= ~(1 << mob);
+  69               		.loc 1 227 0
+  70 002e 9091 DE00 		lds r25,222
+  71 0032 21E0      		ldi r18,lo8(1)
+  72 0034 30E0      		ldi r19,0
+  73 0036 082E      		mov r0,r24
+  74 0038 00C0      		rjmp 2f
+  75               		1:
+  76 003a 220F      		lsl r18
+  77               		2:
+  78 003c 0A94      		dec r0
+  79 003e 02F4      		brpl 1b
+  80 0040 2095      		com r18
+  81 0042 2923      		and r18,r25
+  82 0044 2093 DE00 		sts 222,r18
+  83 0048 0895      		ret
+  84               	.L12:
+ 228:at90can.c     **** 	else
+ 229:at90can.c     **** 		CANIE1 &= ~(1 << (mob - 8));
+  85               		.loc 1 229 0
+  86 004a 9091 DF00 		lds r25,223
+  87 004e 8850      		subi r24,lo8(-(-8))
+  88               	.LVL3:
+  89 0050 21E0      		ldi r18,lo8(1)
+  90 0052 30E0      		ldi r19,0
+  91 0054 082E      		mov r0,r24
+  92 0056 00C0      		rjmp 2f
+  93               		1:
+  94 0058 220F      		lsl r18
+  95               		2:
+  96 005a 0A94      		dec r0
+  97 005c 02F4      		brpl 1b
+  98 005e 2095      		com r18
+  99 0060 2923      		and r18,r25
+ 100 0062 2093 DF00 		sts 223,r18
+ 101 0066 0895      		ret
+ 102               		.cfi_endproc
+ 103               	.LFE19:
+ 105               	.global	_enable_mob_interrupt
+ 107               	_enable_mob_interrupt:
+ 108               	.LFB20:
+ 230:at90can.c     **** }
+ 231:at90can.c     **** 
+ 232:at90can.c     **** // ----------------------------------------------------------------------------
+ 233:at90can.c     **** // enable interrupt of corresponding MOb
+ 234:at90can.c     **** 
+ 235:at90can.c     **** void _enable_mob_interrupt(uint8_t mob)
+ 236:at90can.c     **** {
+ 109               		.loc 1 236 0
+ 110               		.cfi_startproc
+ 111               	.LVL4:
+ 112               	/* prologue: function */
+ 113               	/* frame size = 0 */
+ 114               	/* stack size = 0 */
+ 115               	.L__stack_usage = 0
+ 237:at90can.c     **** 	if (mob < 8)
+ 116               		.loc 1 237 0
+ 117 0068 8830      		cpi r24,lo8(8)
+ 118 006a 00F4      		brsh .L15
+ 238:at90can.c     **** 		CANIE2 |= (1 << mob);
+ 119               		.loc 1 238 0
+ 120 006c 9091 DE00 		lds r25,222
+ 121 0070 21E0      		ldi r18,lo8(1)
+ 122 0072 30E0      		ldi r19,0
+ 123 0074 082E      		mov r0,r24
+ 124 0076 00C0      		rjmp 2f
+ 125               		1:
+ 126 0078 220F      		lsl r18
+ 127               		2:
+ 128 007a 0A94      		dec r0
+ 129 007c 02F4      		brpl 1b
+ 130 007e 922B      		or r25,r18
+ 131 0080 9093 DE00 		sts 222,r25
+ 132 0084 0895      		ret
+ 133               	.L15:
+ 239:at90can.c     **** 	else
+ 240:at90can.c     **** 		CANIE1 |= (1 << (mob - 8));
+ 134               		.loc 1 240 0
+ 135 0086 9091 DF00 		lds r25,223
+ 136 008a 8850      		subi r24,lo8(-(-8))
+ 137               	.LVL5:
+ 138 008c 21E0      		ldi r18,lo8(1)
+ 139 008e 30E0      		ldi r19,0
+ 140 0090 082E      		mov r0,r24
+ 141 0092 00C0      		rjmp 2f
+ 142               		1:
+ 143 0094 220F      		lsl r18
+ 144               		2:
+ 145 0096 0A94      		dec r0
+ 146 0098 02F4      		brpl 1b
+ 147 009a 922B      		or r25,r18
+ 148 009c 9093 DF00 		sts 223,r25
+ 149 00a0 0895      		ret
+ 150               		.cfi_endproc
+ 151               	.LFE20:
+ 153               	.global	can_init
+ 155               	can_init:
+ 156               	.LFB21:
+ 241:at90can.c     **** }
+ 242:at90can.c     **** 
+ 243:at90can.c     **** // ----------------------------------------------------------------------------
+ 244:at90can.c     **** 
+ 245:at90can.c     **** bool at90can_init(uint8_t bitrate)
+ 246:at90can.c     **** {
+ 157               		.loc 1 246 0
+ 158               		.cfi_startproc
+ 159               	.LVL6:
+ 160               	/* prologue: function */
+ 161               	/* frame size = 0 */
+ 162               	/* stack size = 0 */
+ 163               	.L__stack_usage = 0
+ 247:at90can.c     **** 	if (bitrate >= 8)
+ 164               		.loc 1 247 0
+ 165 00a2 8830      		cpi r24,lo8(8)
+ 166 00a4 00F4      		brsh .L19
+ 248:at90can.c     **** 		return false;
+ 249:at90can.c     **** 	
+ 250:at90can.c     **** 	// switch CAN controller to reset mode
+ 251:at90can.c     **** 	CANGCON |= (1 << SWRES);
+ 167               		.loc 1 251 0
+ 168 00a6 9091 D800 		lds r25,216
+ 169 00aa 9160      		ori r25,lo8(1)
+ 170 00ac 9093 D800 		sts 216,r25
+ 171               	.LBB2:
+ 252:at90can.c     **** 	
+ 253:at90can.c     **** 	// set CAN Bit Timing
+ 254:at90can.c     **** 	// (see datasheet page 260)
+ 255:at90can.c     **** 	CANBT1 = pgm_read_byte(&_at90can_cnf[bitrate][0]);
+ 172               		.loc 1 255 0
+ 173 00b0 90E0      		ldi r25,0
+ 174               	.LVL7:
+ 175 00b2 9C01      		movw r18,r24
+ 176 00b4 220F      		lsl r18
+ 177 00b6 331F      		rol r19
+ 178 00b8 280F      		add r18,r24
+ 179 00ba 391F      		adc r19,r25
+ 180 00bc F901      		movw r30,r18
+ 181 00be E050      		subi r30,lo8(-(_at90can_cnf))
+ 182 00c0 F040      		sbci r31,hi8(-(_at90can_cnf))
+ 183               	/* #APP */
+ 184               	 ;  255 "at90can.c" 1
+ 185 00c2 E491      		lpm r30, Z
+ 186               		
+ 187               	 ;  0 "" 2
+ 188               	.LVL8:
+ 189               	/* #NOAPP */
+ 190               	.LBE2:
+ 191 00c4 E093 E200 		sts 226,r30
+ 192               	.LVL9:
+ 193               	.LBB3:
+ 256:at90can.c     **** 	CANBT2 = pgm_read_byte(&_at90can_cnf[bitrate][1]);
+ 194               		.loc 1 256 0
+ 195 00c8 F901      		movw r30,r18
+ 196               	.LVL10:
+ 197 00ca E050      		subi r30,lo8(-(_at90can_cnf+1))
+ 198 00cc F040      		sbci r31,hi8(-(_at90can_cnf+1))
+ 199               	/* #APP */
+ 200               	 ;  256 "at90can.c" 1
+ 201 00ce E491      		lpm r30, Z
+ 202               		
+ 203               	 ;  0 "" 2
+ 204               	.LVL11:
+ 205               	/* #NOAPP */
+ 206               	.LBE3:
+ 207 00d0 E093 E300 		sts 227,r30
+ 208               	.LVL12:
+ 209               	.LBB4:
+ 257:at90can.c     **** 	CANBT3 = pgm_read_byte(&_at90can_cnf[bitrate][2]);
+ 210               		.loc 1 257 0
+ 211 00d4 F901      		movw r30,r18
+ 212               	.LVL13:
+ 213 00d6 E050      		subi r30,lo8(-(_at90can_cnf+2))
+ 214 00d8 F040      		sbci r31,hi8(-(_at90can_cnf+2))
+ 215               	/* #APP */
+ 216               	 ;  257 "at90can.c" 1
+ 217 00da 2491      		lpm r18, Z
+ 218               		
+ 219               	 ;  0 "" 2
+ 220               	.LVL14:
+ 221               	/* #NOAPP */
+ 222               	.LBE4:
+ 223 00dc 2093 E400 		sts 228,r18
+ 224               	.LVL15:
+ 258:at90can.c     **** 	
+ 259:at90can.c     **** 	// activate CAN transmit- and receive-interrupt
+ 260:at90can.c     **** 	CANGIT = 0;
+ 225               		.loc 1 260 0
+ 226 00e0 1092 DA00 		sts 218,__zero_reg__
+ 261:at90can.c     **** 	CANGIE = (1 << ENIT) | (1 << ENRX) | (1 << ENTX);
+ 227               		.loc 1 261 0
+ 228 00e4 80EB      		ldi r24,lo8(-80)
+ 229               	.LVL16:
+ 230 00e6 8093 DB00 		sts 219,r24
+ 262:at90can.c     **** 	
+ 263:at90can.c     **** 	// set timer prescaler to a value which results in a timer
+ 264:at90can.c     **** 	// frequency of 10 kHz
+ 265:at90can.c     **** 	CANTCON = AT90CAN_TIMER_PRESCALE;
+ 231               		.loc 1 265 0
+ 232 00ea 87EC      		ldi r24,lo8(-57)
+ 233 00ec 8093 E500 		sts 229,r24
+ 266:at90can.c     **** 
+ 267:at90can.c     **** 	// disable all filters
+ 268:at90can.c     **** 	at90can_disable_filter( 0xff );
+ 234               		.loc 1 268 0
+ 235 00f0 8FEF      		ldi r24,lo8(-1)
+ 236 00f2 0E94 0000 		call can_disable_filter
+ 237               	.LVL17:
+ 269:at90can.c     **** 	
+ 270:at90can.c     **** 	#if CAN_RX_BUFFER_SIZE > 0
+ 271:at90can.c     **** 	can_buffer_init( &can_rx_buffer, CAN_RX_BUFFER_SIZE, can_rx_list );
+ 238               		.loc 1 271 0
+ 239 00f6 40E0      		ldi r20,lo8(can_rx_list)
+ 240 00f8 50E0      		ldi r21,hi8(can_rx_list)
+ 241 00fa 60E2      		ldi r22,lo8(32)
+ 242 00fc 80E0      		ldi r24,lo8(can_rx_buffer)
+ 243 00fe 90E0      		ldi r25,hi8(can_rx_buffer)
+ 244 0100 0E94 0000 		call can_buffer_init
+ 245               	.LVL18:
+ 272:at90can.c     **** 	#endif
+ 273:at90can.c     **** 	
+ 274:at90can.c     **** 	#if CAN_TX_BUFFER_SIZE > 0
+ 275:at90can.c     **** 	can_buffer_init( &can_tx_buffer, CAN_TX_BUFFER_SIZE, can_tx_list );
+ 276:at90can.c     **** 	#endif
+ 277:at90can.c     **** 	
+ 278:at90can.c     **** 	// activate CAN controller
+ 279:at90can.c     **** 	CANGCON = (1 << ENASTB);
+ 246               		.loc 1 279 0
+ 247 0104 82E0      		ldi r24,lo8(2)
+ 248 0106 8093 D800 		sts 216,r24
+ 280:at90can.c     **** 	
+ 281:at90can.c     **** 	return true;
+ 249               		.loc 1 281 0
+ 250 010a 81E0      		ldi r24,lo8(1)
+ 251 010c 0895      		ret
+ 252               	.LVL19:
+ 253               	.L19:
+ 248:at90can.c     **** 		return false;
+ 254               		.loc 1 248 0
+ 255 010e 80E0      		ldi r24,0
+ 256               	.LVL20:
+ 282:at90can.c     **** }
+ 257               		.loc 1 282 0
+ 258 0110 0895      		ret
+ 259               		.cfi_endproc
+ 260               	.LFE21:
+ 262               	.global	__vector_18
+ 264               	__vector_18:
+ 265               	.LFB22:
+ 283:at90can.c     **** 
+ 284:at90can.c     **** // ----------------------------------------------------------------------------
+ 285:at90can.c     **** // The CANPAGE register have to be restored after usage, otherwise it
+ 286:at90can.c     **** // could cause trouble in the application programm.
+ 287:at90can.c     **** #ifdef AT90CAN
+ 288:at90can.c     **** 	ISR(CANIT_vect)
+ 289:at90can.c     **** #else
+ 290:at90can.c     **** 	ISR(CAN_INT_vect)
+ 291:at90can.c     **** #endif
+ 292:at90can.c     **** {
+ 266               		.loc 1 292 0
+ 267               		.cfi_startproc
+ 268 0112 1F92      		push r1
+ 269               	.LCFI0:
+ 270               		.cfi_def_cfa_offset 3
+ 271               		.cfi_offset 1, -2
+ 272 0114 0F92      		push r0
+ 273               	.LCFI1:
+ 274               		.cfi_def_cfa_offset 4
+ 275               		.cfi_offset 0, -3
+ 276 0116 0FB6      		in r0,__SREG__
+ 277 0118 0F92      		push r0
+ 278 011a 1124      		clr __zero_reg__
+ 279 011c 2F93      		push r18
+ 280               	.LCFI2:
+ 281               		.cfi_def_cfa_offset 5
+ 282               		.cfi_offset 18, -4
+ 283 011e 3F93      		push r19
+ 284               	.LCFI3:
+ 285               		.cfi_def_cfa_offset 6
+ 286               		.cfi_offset 19, -5
+ 287 0120 4F93      		push r20
+ 288               	.LCFI4:
+ 289               		.cfi_def_cfa_offset 7
+ 290               		.cfi_offset 20, -6
+ 291 0122 5F93      		push r21
+ 292               	.LCFI5:
+ 293               		.cfi_def_cfa_offset 8
+ 294               		.cfi_offset 21, -7
+ 295 0124 6F93      		push r22
+ 296               	.LCFI6:
+ 297               		.cfi_def_cfa_offset 9
+ 298               		.cfi_offset 22, -8
+ 299 0126 7F93      		push r23
+ 300               	.LCFI7:
+ 301               		.cfi_def_cfa_offset 10
+ 302               		.cfi_offset 23, -9
+ 303 0128 8F93      		push r24
+ 304               	.LCFI8:
+ 305               		.cfi_def_cfa_offset 11
+ 306               		.cfi_offset 24, -10
+ 307 012a 9F93      		push r25
+ 308               	.LCFI9:
+ 309               		.cfi_def_cfa_offset 12
+ 310               		.cfi_offset 25, -11
+ 311 012c AF93      		push r26
+ 312               	.LCFI10:
+ 313               		.cfi_def_cfa_offset 13
+ 314               		.cfi_offset 26, -12
+ 315 012e BF93      		push r27
+ 316               	.LCFI11:
+ 317               		.cfi_def_cfa_offset 14
+ 318               		.cfi_offset 27, -13
+ 319 0130 CF93      		push r28
+ 320               	.LCFI12:
+ 321               		.cfi_def_cfa_offset 15
+ 322               		.cfi_offset 28, -14
+ 323 0132 EF93      		push r30
+ 324               	.LCFI13:
+ 325               		.cfi_def_cfa_offset 16
+ 326               		.cfi_offset 30, -15
+ 327 0134 FF93      		push r31
+ 328               	.LCFI14:
+ 329               		.cfi_def_cfa_offset 17
+ 330               		.cfi_offset 31, -16
+ 331               	/* prologue: Signal */
+ 332               	/* frame size = 0 */
+ 333               	/* stack size = 16 */
+ 334               	.L__stack_usage = 16
+ 293:at90can.c     **** 	uint8_t canpage;
+ 294:at90can.c     **** 	uint8_t mob;
+ 295:at90can.c     **** 	
+ 296:at90can.c     **** 	if ((CANHPMOB & 0xF0) != 0xF0)
+ 335               		.loc 1 296 0
+ 336 0136 8091 EC00 		lds r24,236
+ 337 013a 807F      		andi r24,lo8(-16)
+ 338 013c 803F      		cpi r24,lo8(-16)
+ 339 013e 01F4      		brne .+2
+ 340 0140 00C0      		rjmp .L21
+ 297:at90can.c     **** 	{
+ 298:at90can.c     **** 		// save MOb page register
+ 299:at90can.c     **** 		canpage = CANPAGE;
+ 341               		.loc 1 299 0
+ 342 0142 C091 ED00 		lds r28,237
+ 343               	.LVL21:
+ 300:at90can.c     **** 		
+ 301:at90can.c     **** 		// select MOb page with the highest priority
+ 302:at90can.c     **** 		CANPAGE = CANHPMOB & 0xF0;
+ 344               		.loc 1 302 0
+ 345 0146 8091 EC00 		lds r24,236
+ 346 014a 807F      		andi r24,lo8(-16)
+ 347 014c 8093 ED00 		sts 237,r24
+ 303:at90can.c     **** 		mob = (CANHPMOB >> 4);
+ 348               		.loc 1 303 0
+ 349 0150 2091 EC00 		lds r18,236
+ 350               	.LVL22:
+ 304:at90can.c     **** 		
+ 305:at90can.c     **** 		// a interrupt is only generated if a message was transmitted or received
+ 306:at90can.c     **** 		if (CANSTMOB & (1 << TXOK))
+ 351               		.loc 1 306 0
+ 352 0154 8091 EE00 		lds r24,238
+ 353 0158 86FF      		sbrs r24,6
+ 354 015a 00C0      		rjmp .L22
+ 303:at90can.c     **** 		mob = (CANHPMOB >> 4);
+ 355               		.loc 1 303 0
+ 356 015c 2295      		swap r18
+ 357               	.LVL23:
+ 358 015e 2F70      		andi r18,lo8(15)
+ 307:at90can.c     **** 		{
+ 308:at90can.c     **** 			// clear MOb
+ 309:at90can.c     **** 			CANSTMOB &= 0;
+ 359               		.loc 1 309 0
+ 360 0160 8091 EE00 		lds r24,238
+ 361 0164 1092 EE00 		sts 238,__zero_reg__
+ 310:at90can.c     **** 			CANCDMOB = 0;
+ 362               		.loc 1 310 0
+ 363 0168 1092 EF00 		sts 239,__zero_reg__
+ 311:at90can.c     **** 			
+ 312:at90can.c     **** 			#if CAN_TX_BUFFER_SIZE > 0
+ 313:at90can.c     **** 			can_t *buf = can_buffer_get_dequeue_ptr(&can_tx_buffer);
+ 314:at90can.c     **** 			
+ 315:at90can.c     **** 			// check if there are any another messages waiting 
+ 316:at90can.c     **** 			if (buf != NULL)
+ 317:at90can.c     **** 			{
+ 318:at90can.c     **** 				at90can_copy_message_to_mob( buf );
+ 319:at90can.c     **** 				can_buffer_dequeue(&can_tx_buffer);
+ 320:at90can.c     **** 				
+ 321:at90can.c     **** 				// enable transmission
+ 322:at90can.c     **** 				CANCDMOB |= (1<<CONMOB0);
+ 323:at90can.c     **** 			}
+ 324:at90can.c     **** 			else {
+ 325:at90can.c     **** 				// buffer underflow => no more messages to send
+ 326:at90can.c     **** 				_disable_mob_interrupt(mob);
+ 327:at90can.c     **** 				_transmission_in_progress = 0;
+ 328:at90can.c     **** 			}
+ 329:at90can.c     **** 			#else
+ 330:at90can.c     **** 			_free_buffer++;
+ 364               		.loc 1 330 0
+ 365 016c 8091 0000 		lds r24,_free_buffer
+ 366 0170 8F5F      		subi r24,lo8(-(1))
+ 367 0172 8093 0000 		sts _free_buffer,r24
+ 331:at90can.c     **** 			
+ 332:at90can.c     **** 			// reset interrupt
+ 333:at90can.c     **** 			if (mob < 8)
+ 368               		.loc 1 333 0
+ 369 0176 2830      		cpi r18,lo8(8)
+ 370 0178 00F4      		brsh .L23
+ 334:at90can.c     **** 				CANIE2 &= ~(1 << mob);
+ 371               		.loc 1 334 0
+ 372 017a 3091 DE00 		lds r19,222
+ 373 017e 81E0      		ldi r24,lo8(1)
+ 374 0180 90E0      		ldi r25,0
+ 375 0182 022E      		mov r0,r18
+ 376 0184 00C0      		rjmp 2f
+ 377               		1:
+ 378 0186 880F      		lsl r24
+ 379               		2:
+ 380 0188 0A94      		dec r0
+ 381 018a 02F4      		brpl 1b
+ 382 018c 8095      		com r24
+ 383 018e 8323      		and r24,r19
+ 384 0190 8093 DE00 		sts 222,r24
+ 385 0194 00C0      		rjmp .L24
+ 386               	.L23:
+ 335:at90can.c     **** 			else
+ 336:at90can.c     **** 				CANIE1 &= ~(1 << (mob - 8));
+ 387               		.loc 1 336 0
+ 388 0196 3091 DF00 		lds r19,223
+ 389 019a 2850      		subi r18,lo8(-(-8))
+ 390 019c 81E0      		ldi r24,lo8(1)
+ 391 019e 90E0      		ldi r25,0
+ 392 01a0 022E      		mov r0,r18
+ 393 01a2 00C0      		rjmp 2f
+ 394               		1:
+ 395 01a4 880F      		lsl r24
+ 396               		2:
+ 397 01a6 0A94      		dec r0
+ 398 01a8 02F4      		brpl 1b
+ 399 01aa 8095      		com r24
+ 400 01ac 8323      		and r24,r19
+ 401 01ae 8093 DF00 		sts 223,r24
+ 402 01b2 00C0      		rjmp .L24
+ 403               	.LVL24:
+ 404               	.L22:
+ 405               	.LBB5:
+ 337:at90can.c     **** 			#endif
+ 338:at90can.c     **** 			
+ 339:at90can.c     **** 			CAN_INDICATE_TX_TRAFFIC_FUNCTION;
+ 340:at90can.c     **** 		}
+ 341:at90can.c     **** 		else {
+ 342:at90can.c     **** 			// a message was received successfully
+ 343:at90can.c     **** 			#if CAN_RX_BUFFER_SIZE > 0
+ 344:at90can.c     **** 			can_t *buf = can_buffer_get_enqueue_ptr(&can_rx_buffer);
+ 406               		.loc 1 344 0
+ 407 01b4 80E0      		ldi r24,lo8(can_rx_buffer)
+ 408 01b6 90E0      		ldi r25,hi8(can_rx_buffer)
+ 409 01b8 0E94 0000 		call can_buffer_get_enqueue_ptr
+ 410               	.LVL25:
+ 345:at90can.c     **** 			
+ 346:at90can.c     **** 			if (buf != NULL)
+ 411               		.loc 1 346 0
+ 412 01bc 0097      		sbiw r24,0
+ 413 01be 01F0      		breq .L25
+ 347:at90can.c     **** 			{
+ 348:at90can.c     **** 				// read message
+ 349:at90can.c     **** 				at90can_copy_mob_to_message( buf );
+ 414               		.loc 1 349 0
+ 415 01c0 0E94 0000 		call at90can_copy_mob_to_message
+ 416               	.LVL26:
+ 350:at90can.c     **** 				
+ 351:at90can.c     **** 				// push it to the list
+ 352:at90can.c     **** 				can_buffer_enqueue(&can_rx_buffer);
+ 417               		.loc 1 352 0
+ 418 01c4 80E0      		ldi r24,lo8(can_rx_buffer)
+ 419 01c6 90E0      		ldi r25,hi8(can_rx_buffer)
+ 420 01c8 0E94 0000 		call can_buffer_enqueue
+ 421               	.LVL27:
+ 422               	.L25:
+ 353:at90can.c     **** 			}
+ 354:at90can.c     **** 			else {
+ 355:at90can.c     **** 				// buffer overflow => reject message
+ 356:at90can.c     **** 				// FIXME inform the user
+ 357:at90can.c     **** 			}
+ 358:at90can.c     **** 			
+ 359:at90can.c     **** 			// clear flags
+ 360:at90can.c     **** 			CANSTMOB &= 0;
+ 423               		.loc 1 360 0
+ 424 01cc 8091 EE00 		lds r24,238
+ 425 01d0 1092 EE00 		sts 238,__zero_reg__
+ 361:at90can.c     **** 			CANCDMOB = (1 << CONMOB1) | (CANCDMOB & (1 << IDE));
+ 426               		.loc 1 361 0
+ 427 01d4 8091 EF00 		lds r24,239
+ 428 01d8 8071      		andi r24,lo8(16)
+ 429 01da 8068      		ori r24,lo8(-128)
+ 430 01dc 8093 EF00 		sts 239,r24
+ 431               	.L24:
+ 432               	.LBE5:
+ 362:at90can.c     **** 			#else
+ 363:at90can.c     **** 			_messages_waiting++;
+ 364:at90can.c     **** 			
+ 365:at90can.c     **** 			// reset interrupt
+ 366:at90can.c     **** 			if (mob < 8)
+ 367:at90can.c     **** 				CANIE2 &= ~(1 << mob);
+ 368:at90can.c     **** 			else
+ 369:at90can.c     **** 				CANIE1 &= ~(1 << (mob - 8));
+ 370:at90can.c     **** 			#endif
+ 371:at90can.c     **** 			
+ 372:at90can.c     **** 			CAN_INDICATE_RX_TRAFFIC_FUNCTION;
+ 373:at90can.c     **** 		}
+ 374:at90can.c     **** 		
+ 375:at90can.c     **** 		// restore MOb page register
+ 376:at90can.c     **** 		CANPAGE = canpage;
+ 433               		.loc 1 376 0 discriminator 2
+ 434 01e0 C093 ED00 		sts 237,r28
+ 435 01e4 00C0      		rjmp .L20
+ 436               	.LVL28:
+ 437               	.L21:
+ 377:at90can.c     **** 	}
+ 378:at90can.c     **** 	else
+ 379:at90can.c     **** 	{
+ 380:at90can.c     **** 		// no MOb matches with the interrupt => general interrupt
+ 381:at90can.c     **** 		CANGIT |= 0;
+ 438               		.loc 1 381 0
+ 439 01e6 8091 DA00 		lds r24,218
+ 440 01ea 8093 DA00 		sts 218,r24
+ 441               	.L20:
+ 442               	/* epilogue start */
+ 382:at90can.c     **** 	}
+ 383:at90can.c     **** }
+ 443               		.loc 1 383 0
+ 444 01ee FF91      		pop r31
+ 445 01f0 EF91      		pop r30
+ 446 01f2 CF91      		pop r28
+ 447 01f4 BF91      		pop r27
+ 448 01f6 AF91      		pop r26
+ 449 01f8 9F91      		pop r25
+ 450 01fa 8F91      		pop r24
+ 451 01fc 7F91      		pop r23
+ 452 01fe 6F91      		pop r22
+ 453 0200 5F91      		pop r21
+ 454 0202 4F91      		pop r20
+ 455 0204 3F91      		pop r19
+ 456 0206 2F91      		pop r18
+ 457 0208 0F90      		pop r0
+ 458 020a 0FBE      		out __SREG__,r0
+ 459 020c 0F90      		pop r0
+ 460 020e 1F90      		pop r1
+ 461 0210 1895      		reti
+ 462               		.cfi_endproc
+ 463               	.LFE22:
+ 465               	.global	__vector_19
+ 467               	__vector_19:
+ 468               	.LFB23:
+ 384:at90can.c     **** 
+ 385:at90can.c     **** // ----------------------------------------------------------------------------
+ 386:at90can.c     **** // Overflow of CAN timer
+ 387:at90can.c     **** #ifdef AT90CAN
+ 388:at90can.c     **** 	ISR(OVRIT_vect) {}
+ 389:at90can.c     **** #else
+ 390:at90can.c     **** 	ISR(CAN_TOVF_vect) {}
+ 469               		.loc 1 390 0
+ 470               		.cfi_startproc
+ 471 0212 1F92      		push r1
+ 472               	.LCFI15:
+ 473               		.cfi_def_cfa_offset 3
+ 474               		.cfi_offset 1, -2
+ 475 0214 0F92      		push r0
+ 476               	.LCFI16:
+ 477               		.cfi_def_cfa_offset 4
+ 478               		.cfi_offset 0, -3
+ 479 0216 0FB6      		in r0,__SREG__
+ 480 0218 0F92      		push r0
+ 481 021a 1124      		clr __zero_reg__
+ 482               	/* prologue: Signal */
+ 483               	/* frame size = 0 */
+ 484               	/* stack size = 3 */
+ 485               	.L__stack_usage = 3
+ 486               	/* epilogue start */
+ 487               		.loc 1 390 0
+ 488 021c 0F90      		pop r0
+ 489 021e 0FBE      		out __SREG__,r0
+ 490 0220 0F90      		pop r0
+ 491 0222 1F90      		pop r1
+ 492 0224 1895      		reti
+ 493               		.cfi_endproc
+ 494               	.LFE23:
+ 496               		.comm	_free_buffer,1,1
+ 497               		.comm	can_rx_list,512,1
+ 498               		.comm	can_rx_buffer,6,1
+ 499               	.global	_at90can_cnf
+ 500               		.section	.progmem.data,"a",@progbits
+ 503               	_at90can_cnf:
+ 504 0000 7E        		.byte	126
+ 505 0001 6E        		.byte	110
+ 506 0002 7F        		.byte	127
+ 507 0003 62        		.byte	98
+ 508 0004 0C        		.byte	12
+ 509 0005 37        		.byte	55
+ 510 0006 26        		.byte	38
+ 511 0007 0C        		.byte	12
+ 512 0008 37        		.byte	55
+ 513 0009 12        		.byte	18
+ 514 000a 0C        		.byte	12
+ 515 000b 37        		.byte	55
+ 516 000c 0E        		.byte	14
+ 517 000d 0C        		.byte	12
+ 518 000e 37        		.byte	55
+ 519 000f 06        		.byte	6
+ 520 0010 0C        		.byte	12
+ 521 0011 37        		.byte	55
+ 522 0012 02        		.byte	2
+ 523 0013 0C        		.byte	12
+ 524 0014 37        		.byte	55
+ 525 0015 00        		.byte	0
+ 526 0016 0C        		.byte	12
+ 527 0017 36        		.byte	54
+ 528               		.text
+ 529               	.Letext0:
+ 530               		.file 2 "/usr/lib/avr/include/stdint.h"
+ 531               		.file 3 "can.h"
+ 532               		.file 4 "can_buffer.h"
+ 533               		.file 5 "at90can_private.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 at90can.c
+     /tmp/ccXZCw7f.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccXZCw7f.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccXZCw7f.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccXZCw7f.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccXZCw7f.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccXZCw7f.s:12     .text:0000000000000000 _find_free_mob
+                            *COM*:0000000000000001 _free_buffer
+     /tmp/ccXZCw7f.s:57     .text:000000000000002a _disable_mob_interrupt
+     /tmp/ccXZCw7f.s:107    .text:0000000000000068 _enable_mob_interrupt
+     /tmp/ccXZCw7f.s:155    .text:00000000000000a2 can_init
+     /tmp/ccXZCw7f.s:503    .progmem.data:0000000000000000 _at90can_cnf
+                            *COM*:0000000000000200 can_rx_list
+                            *COM*:0000000000000006 can_rx_buffer
+     /tmp/ccXZCw7f.s:264    .text:0000000000000112 __vector_18
+     /tmp/ccXZCw7f.s:467    .text:0000000000000212 __vector_19
+
+UNDEFINED SYMBOLS
+can_disable_filter
+can_buffer_init
+can_buffer_get_enqueue_ptr
+at90can_copy_mob_to_message
+can_buffer_enqueue
+__do_clear_bss
