@@ -1,0 +1,13 @@
+# ripped of from https://www.mikrocontroller.net/topic/289262
+
+*.bin
+*.d
+*.eep
+*.elf
+*.hex
+*.lss
+*.map
+*.o
+*.srec
+*.mk
+*.S
