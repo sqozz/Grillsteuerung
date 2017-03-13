@@ -120,7 +120,7 @@ int main(void) {
 					case 0x01: // enable/disable channel command
 						// TODO: Make this a function
 						// What we expect is a message like this:
-						// 1234#0x0y
+						// root_id#0000000000000x0y
 						// where x is the probe number to acces
 						// and   y is either 1 to enable or 0 disable the probe
 						// TODO: Maybe some fallback for wrongly crafted messages?
