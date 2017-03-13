@@ -29,6 +29,14 @@ int main(void) {
 	timer_init();
 	sei();
 
+	uint8_t syned = 0;
+	uint32_t stored_id = read_stored_id()
+
+	if (old_id == -1) {
+		synced = false;
+	} else {
+		synced = true;
+	}
 
 	can_t msg_rx;
 	can_t msg_tx;
@@ -38,10 +46,11 @@ int main(void) {
 	msg_tx.length = 1;
 	bw_can_init(500);
 
-	timer_wait(500);
+	timer_wait(500); //TODO: Still necessary or debug code?
 	uint8_t enabled_sensors = 0;
 	int8_t board = detect_board();
-	uint32_t next_event = timer_get() + 200;
+	uint32_t next_event_time = timer_get() + 200;
+
 	if (board == PROBE_BOARD) {
 		spi_init_master();
 	}
@@ -49,48 +58,87 @@ int main(void) {
 	while (true) {
 		msg_tx.data[0] = board;
 
-		if (timer_get() >= next_event) {
-			if (board == PROBE_BOARD) {
-				for (uint8_t i = 0; i < 6; i++) {
-					if ((1 << (i + 1)) & enabled_sensors) {
-						send_resistor_value(i);
-					}
-				}
-			} else if (board == FAN_BOARD) {
-				msg_tx.id = board;
-				msg_tx.data[0] = 0xFF;
-				can_send_message(&msg_tx);
-			} else {
-				msg_tx.id = 0x333;
-				msg_tx.data[0] = 0xFF;
-				can_send_message(&msg_tx);
-			}
-			next_event = timer_get() + 200;
+		if (synced) {
+			// Send resistor values of all enabled sensors
+			// in an 200ms intervall
+			if (timer_get() >= next_event_time) {
+				if (board == PROBE_BOARD) { // This is a board with sensors connected
+					for (uint8_t i = 0; i < 6; i++) {
+						if ((1 << (i + 1)) & enabled_sensors) {
+							send_resistor_value(i);
+						};
+					};
+				} else if (board == FAN_BOARD) { // This is a board to controll the fan with
+					msg_tx.id = board;
+					msg_tx.data[0] = 0xFF;
+					can_send_message(&msg_tx);
+				} else { // This is a board with no purpose. No idea why i send this…
+					msg_tx.id = 0x333;
+					msg_tx.data[0] = 0xFF;
+					can_send_message(&msg_tx);
+				};
+				next_event_time = timer_get() + 200;
+			};
 		}
 
+		// If not synced or the sync button was pressed
+		// request a new can root id.
+		// This represents the first id which can be used
+		// plus server-defined ammount of extra ids to use
+		if (!synced || sync_button_pressed() == true) {
+			// Sync initiated
+			// TODO: let some LED blink to inform the user
+			for (uint8_t i = 0; i <= 10; i++) {
+				root_id = request_root_id();
+				timer_wait(200);
+				if (synced) {
+					persist_id(uint32_t board_id);
+					synced = true;
+					// Sync was sucessfull
+					// TODO: stop the blinking LED to inform the user
+					// maybe switch on a second one?
+					break; // if id was received, break
+				}; // if this fails, this loop gets toggled again in the next run
+			};
+		};
+
+		// Prevent this thing to fail if the
+		// timer is near overflow? Maybe? Somewhen™
 		if (timer_get() & 1 << 31) {
 			soft_reset();
-		}
+		};
 
+		// Receive can message if any in msg_rx buffer
+		// TODO: add dynamic CAN ids
 		while (can_get_message(&msg_rx)) {
-			if (msg_rx.id == 0x1337) {
+			if (msg_rx.id == 0x1337) { // Reset message to get µC into the can bootloader
 				soft_reset();
 			};
-			if (msg_rx.id == 0x1234) {
+			if (msg_rx.id == 0x1234) { // Channel to enable/disable sensors
+				// What we expect is a message like this:
+				// 1234#0x0y
+				// where x is the probe number to acces
+				// and   y is either 1 to enable or 0 disable the probe
+				// TODO: Maybe some fallback for wrongly crafted messages?
 				enabled_sensors &= ~(1 << msg_rx.data[0]);
 				enabled_sensors |= msg_rx.data[1] << msg_rx.data[0];
-			}
+			};
+			if (msg_rx.id == 0x0815) { // TODO: Do something with the fan
+				return 0;
+			};
 		};
 	};
-}
+};
 
-void send_resistor_value(uint8_t sensor) {
+// Send the resistance of the temperature sensor over can
+void send_resistor_value(uint8_t sensor, uint32_t root_id) {
 	can_t msg_tx;
-	msg_tx.id = 0x004 + sensor;
+	msg_tx.id = root_id + sensor;
 	msg_tx.flags.extended = 0;
 	msg_tx.flags.rtr = 0;
 	msg_tx.length = 4;
 
+	// Some math magic
 	uint32_t adc_value = 0;
 	adc_value = mcp3208_read_adc(sensor);
 	uint32_t r2 = 0;
@@ -105,87 +153,21 @@ void send_resistor_value(uint8_t sensor) {
 	can_send_message(&msg_tx);
 }
 
-/*
-int main(void) {
-	timer_init();
-	uint32_t old_timestamp = timer_get();
+void persist_id(uint32_t board_id) {
+	// TODO: store board_id somewhere
+}
 
-	can_t msg_rx;
-	can_t msg_tx;
-	msg_tx.id = 0x4C0;
-	msg_tx.flags.extended = 0;
-	msg_tx.flags.rtr = 0;
-	msg_tx.length = 2;
-	bw_can_init(500);
+uint32_t read_stored_id(void) {
+	// return oldId if stored somewhere
+	// TODO: store this value somewhere
+	return -1 // no id stored - request new one
+}
 
-	sei();
-	timer_wait(1000);
-
-	spi_init_master();
-
-	int16_t adc_value;
-	int16_t temp = 0, R;
-
-	while (true) {
-
-		timer_wait(100);
-		adc_value = mcp3208_read_adc(0);
-
-		R = log(1 / (1024 / adc_value - 1) * RESISTOR_VALUE);
-		temp = (1 / (STEINHART_HART_COEF_A + STEINHART_HART_COEF_B * R + STEINHART_HART_COEF_C * R * R * R)) - 273.25;
-		msg_tx.id = 0x4C0;
-		msg_tx.data[0] = temp >> 8;
-		msg_tx.data[1] = temp & 0xFF;
-		can_send_message(&msg_tx);
-
-		msg_tx.id = 0x1B1;
-		msg_tx.data[0] = adc_value >> 8;
-		msg_tx.data[1] = adc_value & 0xFF;
-		can_send_message(&msg_tx);
-
-
-		//mcp3208_read_adc(6, msg_tx.data);
-		//can_send_message(&msg_tx);
-
-
-		// soft reset by can message
-		while (can_get_message(&msg_rx)) {
-			if (msg_rx.id == 0x1337) {
-				soft_reset();
-			};
-		};
-	};
-};
-
-int main(void) {
-	timer_init();
-	uint32_t old_timestamp = timer_get();
-
-	can_t msg_rx;
-	bw_can_init(500);
-	//I2cInit();
-
-	sei();
-	timer_wait(1000);
-	SET_OUTPUT(ENABLE_FAN);
-	SET(ENABLE_FAN);
-
-	uint8_t address = 0x78;
-	set_wiper(address, MCP4551_WIPER_B );
-
-	uint16_t wiper_value = 0x63;
-
-	while (true) {
-		set_wiper(address, 0x63);
-
-		while (can_get_message(&msg_rx)) {
-			if (msg_rx.id == 0x1337) {
-				soft_reset();
-			};
-		};
-	};
-};
-*/
+uint8_t sync_button_pressed(void) {
+	// return true if button is pressed
+	// TODO implement readout of button
+	return false
+}
 
 // code for probe boards
 void spi_init_master(void) {
@@ -277,6 +259,8 @@ uint8_t i2c_init_mcp(uint8_t address) {
 // end code for fan control boards
 
 
+// Detects the current board by probing for the ADC on I2C
+// Returns:
 // -1 unknown board
 //  1 probe board
 //  0 fan control board
@@ -289,7 +273,7 @@ int8_t detect_board(void) {
 }
 
 
-
+// Restart the µC
 void soft_reset(void) {
 	wdt_enable(WDTO_15MS);
 	while (1);
