@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "Setting can id"
+cansend can0 002#0a

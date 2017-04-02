@@ -10,7 +10,8 @@
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
 #include <math.h>
-
+#include <string.h>
+#include <avr/eeprom.h>
 #include "unifiedFirmware.h"
 
 #define PROBE_BOARD 1
@@ -25,18 +26,28 @@
 
 #define ENABLE_FAN    C,7
 
+#define BTN_SYNC      D,5
+#define LED_OK        C,1
+#define LED_SYNC      D,7
+
+uint8_t synced = false;
+
 int main(void) {
 	timer_init();
 	sei();
 
-	uint8_t syned = 0;
-	uint32_t stored_id = read_stored_id();
-	uint32_t root_id = stored_id;
+	SET_INPUT(BTN_SYNC);
+	SET_OUTPUT(LED_SYNC);
+	SET_OUTPUT(LED_OK);
 
-	if (old_id == -1) {
+	uint32_t root_id = read_stored_id();
+	uint8_t command;
+
+	if (root_id == 1337) {
 		synced = false;
 	} else {
 		synced = true;
+		SET(LED_OK);
 	}
 
 	can_t msg_rx;
@@ -47,10 +58,10 @@ int main(void) {
 	msg_tx.length = 1;
 	bw_can_init(500);
 
-	timer_wait(500); //TODO: Still necessary or debug code?
-	uint8_t enabled_sensors = 0;
+	uint8_t enabled_sensors = 255; // Enable all sensors by default
 	int8_t board = detect_board();
 	uint32_t next_event_time = timer_get() + 200;
+
 
 	if (board == PROBE_BOARD) {
 		spi_init_master();
@@ -70,7 +81,7 @@ int main(void) {
 						};
 					};
 				} else if (board == FAN_BOARD) { // This is a board to controll the fan with
-					msg_tx.id = board;
+					msg_tx.id = root_id;
 					msg_tx.data[0] = 0xFF;
 					can_send_message(&msg_tx);
 				} else { // This is a board with no purpose. No idea why i send this…
@@ -80,39 +91,31 @@ int main(void) {
 				};
 				next_event_time = timer_get() + 200;
 			};
-		}
-
-		// If not synced or the sync button was pressed
-		// request a new can root id.
-		// This represents the first id which can be used
-		// plus server-defined ammount of extra ids to use
-		if (!synced || sync_button_pressed() == true) {
-			// Sync initiated
-			// TODO: let some LED blink to inform the user
-			for (uint8_t i = 0; i <= 10; i++) {
-				root_id = request_root_id();
-				timer_wait(200);
-				if (synced) {
-					persist_id(uint32_t root_id);
-					// Sync was sucessfull
-					// TODO: stop the blinking LED to inform the user
-					// maybe switch on a second one?
-					break; // if id was received, break
-				}; // if this fails, this loop gets toggled again in the next run
-			};
 		};
+
+		// It the sync button gets pressed request a new can root id.
+		// This represents the first id which can be used to contact the server
+		if (sync_button_pressed()) {
+			synced = false;
+			RESET(LED_OK);
+			root_id = request_root_id();
+			if (root_id != 0) {
+				synced = true;
+				SET(LED_OK);
+			}
+		}
 
 		// Prevent this thing to fail if the
 		// timer is near overflow? Maybe? Somewhen™
-		if (timer_get() & 1 << 31) {
+		if (timer_get() & 1l << 31) {
 			soft_reset();
 		};
 
 		// Receive can message if any in msg_rx buffer
-		// TODO: add dynamic CAN ids
 		while (can_get_message(&msg_rx)) {
-			if (msg_rx.id == root_id) {
+			if ((msg_rx.id == root_id) && (root_id > 0)) {
 				command = msg_rx.data[7]; // MSB contains the command to execute
+
 				switch (command) {
 					case 0x00: // soft reset command
 						soft_reset();
@@ -126,43 +129,33 @@ int main(void) {
 						// TODO: Maybe some fallback for wrongly crafted messages?
 						enabled_sensors &= ~(1 << msg_rx.data[0]);
 						enabled_sensors |= msg_rx.data[1] << msg_rx.data[0];
-						send_response(root_id, enabled_sensors << 8);
+						send_response(root_id, (uint8_t*) &enabled_sensors, 4);
 						break;
 					case 0x02: // fan control message
 						if (board != FAN_BOARD) {
-							send_response(root_id, 0xff << 8);
+							send_response(root_id, (uint8_t*) "\xff", 1);
 						};
 						break;
+					case 0xFF:
+						send_response(root_id, (uint8_t*) msg_rx.data, msg_rx.length);
 					default:
 						break;
 				}
-			};
-			if (msg_rx.id == 0x1337) { // Reset message to get µC into the can bootloader
-				soft_reset();
-			};
-			if (msg_rx.id == 0x1234) { // Channel to enable/disable sensors
-				// What we expect is a message like this:
-				// 1234#0x0y
-				// where x is the probe number to acces
-				// and   y is either 1 to enable or 0 disable the probe
-				// TODO: Maybe some fallback for wrongly crafted messages?
-				enabled_sensors &= ~(1 << msg_rx.data[0]);
-				enabled_sensors |= msg_rx.data[1] << msg_rx.data[0];
-			};
-			if (msg_rx.id == 0x0815) { // TODO: Do something with the fan
-				return 0;
 			};
 		};
 	};
 };
 
-void send_response(uint32_t root_id, uint32_t response[8]) {
+void send_response(uint32_t root_id, uint8_t response[], uint8_t length) {
 	can_t msg_tx;
-	msg_tx.data = response;
+	if (length > 0) {
+		memcpy(msg_tx.data, response, length);
+	}
+
 	msg_tx.id = root_id + 1; // Answer id is root_id + 1
 	msg_tx.flags.extended = 0;
 	msg_tx.flags.rtr = 0;
-	msg_tx.length = 8;
+	msg_tx.length = length;
 
 	can_send_message(&msg_tx);
 };
@@ -170,7 +163,7 @@ void send_response(uint32_t root_id, uint32_t response[8]) {
 // Send the resistance of the temperature sensor over can
 void send_resistor_value(uint8_t sensor, uint32_t root_id) {
 	can_t msg_tx;
-	msg_tx.id = root_id + sensor + 1; // Sensor start at 0. +1 makes sure to never send on the root_id
+	msg_tx.id = root_id + (sensor + 1) + 1; // Sensor start at 0. +1 makes sure to never send on the root_id
 	msg_tx.flags.extended = 0;
 	msg_tx.flags.rtr = 0;
 	msg_tx.length = 4;
@@ -191,25 +184,46 @@ void send_resistor_value(uint8_t sensor, uint32_t root_id) {
 }
 
 void persist_id(uint32_t board_id) {
-	// TODO: Store board_id somewhere
+	eeprom_update_dword((uint32_t*) 0, board_id);
+	SET(LED_SYNC);
 }
 
 uint32_t read_stored_id(void) {
-	// Return oldId if stored somewhere
-	// TODO: store this value somewhere
-	return -1 // no id stored - request new one
+	uint32_t old_id = eeprom_read_dword((uint32_t*) 0);
+	if (old_id == 0xFF || old_id == 0) {
+		return 1337;
+	} else {
+		return old_id;
+	}
 }
 
 uint8_t sync_button_pressed(void) {
 	// Return true if button is pressed
-	// TODO Implement readout of button
-	return false
+	return IS_SET(BTN_SYNC);
 }
 
 uint32_t request_root_id(void) {
-	uint32_t requested_id = 0x00;
-	// TODO: Implement actual can code to send a request message to master
-	return requested_id
+	can_t msg_rx;
+	uint32_t requested_id = 0x0;
+	uint32_t timeout;
+
+	for (uint8_t i = 0; i <= 10; i++) {
+		send_response(-1, (uint8_t*) NULL, 0);
+		timeout = timer_get() + 200;
+		while (timeout >= timer_get()) {
+			can_get_message(&msg_rx);
+			if (msg_rx.id == 0x2 && msg_rx.length == 1) {
+				requested_id = msg_rx.data[0];
+				persist_id(requested_id);
+				RESET(LED_SYNC);
+				return requested_id;
+			};
+		};
+		TOGGLE(LED_SYNC);
+	};
+	RESET(LED_SYNC);
+
+	return 0;
 }
 
 // code for probe boards
@@ -220,13 +234,6 @@ void spi_init_master(void) {
 	SET_OUTPUT(SPI_CLK);
 	SET(SPI_CS);
 	SET_OUTPUT(SPI_CS);
-
-	for (uint8_t i = 0; i <= 10; i++) {
-		timer_wait(123);
-		SET(SPI_CLK);
-		timer_wait(123);
-		RESET(SPI_CLK);
-	}
 
 
 	SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR0) | (1<<SPR1);
