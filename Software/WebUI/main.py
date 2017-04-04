@@ -65,3 +65,5 @@ def setup():
 
 setup()
 run(host="0.0.0.0", port=8080, debug=True, reloader=True)
+
+# vim:ts=2:sw=2:sts=2:noexpandtab:fileencoding=utf-8
