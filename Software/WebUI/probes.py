@@ -5,6 +5,9 @@ import json
 import threading
 from functools import reduce
 
+canListener = None
+canInterface = "can0"
+
 class ThreadedCanListener(threading.Thread):
 	def __init__(self, interface, queueLength = 1):
 		self.interface = interface
@@ -19,6 +22,7 @@ class ThreadedCanListener(threading.Thread):
 			with self.__messages_sema:
 				if msg.arbitration_id not in self.messages.keys():
 					self.messages[msg.arbitration_id] = []
+					print("new id: {}".format(msg.arbitration_id))
 
 				if len(self.messages[msg.arbitration_id]) >= self.__queueLength:
 					oldMessage = self.messages[msg.arbitration_id]
@@ -27,30 +31,95 @@ class ThreadedCanListener(threading.Thread):
 
 				self.messages[msg.arbitration_id].append(msg.data)
 
-
 	def getMessageQueue(self):
 		with self.__messages_sema:
 			return self.messages
 
 	def getMessageQueueFromSensor(self, sensorNr):
-		sensorId = sensorNr + 3
+		sensorId = sensorNr
 		with self.__messages_sema:
 			if sensorId in self.messages.keys():
 				return self.messages[sensorId]
 			else:
 				return None
 
+	def getMessagesQueueFromFan(self, fanId):
+		with self.__messages_sema:
+			if fanId in self.messages.keys():
+				return self.messages[fanId]
+			else:
+				return None
+
+	def sendMessage(self, targetId, message):
+		message = can.Message(arbitration_id = targetId, data = message, extended_id = False)
+		self.__canBus.send(message)
+
+class Fan():
+	MIN_VALUE = 0xE000
+	MAX_VALUE = 0xFFFF
+	RANGE = MAX_VALUE - MIN_VALUE
+
+	def __init__(self):
+		global canListener
+		global canInterface
+		if canListener is None:
+			self.__canListenerThread = ThreadedCanListener(canInterface)
+			self.__canListenerThread.start()
+		else:
+			self.__canListenerThread = canListener
+		pass
+
+	def __convertToPercent(self, rawNumber):
+		print("RAW: {}  -  MIN_VALUE: {}  -  MAX_VALUE: {}".format(rawNumber, self.MIN_VALUE, self.MAX_VALUE))
+		if rawNumber < self.MIN_VALUE:
+			return 0
+		else:
+			return ((100 / self.RANGE) * (rawNumber - self.MIN_VALUE))
+
+	def __convertToRaw(self, percent):
+		percent = int(percent)
+		print((self.RANGE / 100) * percent)
+		if percent is 0:
+			return 0
+		else:
+			return self.MIN_VALUE + int((self.RANGE / 100) * percent)
+
+	def setFanSpeed(self, fanId, percent):
+		print("Set speed to {}%".format(percent))
+		intValue = self.__convertToRaw(percent)
+		print("Set speed to raw {}".format(intValue))
+		message = [intValue >> 8, intValue & 0xFF] + [0x0]*5 + [0x02]
+		self.__canListenerThread.sendMessage(fanId - 1, message)
+
+	def getFanSpeed(self, fanId):
+		dataJson = []
+		messageQueue = self.__canListenerThread.getMessageQueue()
+
+		if fanId in messageQueue.keys() and len(messageQueue[fanId]) > 0:
+			fanQueue = messageQueue[fanId]
+			fanSpeed = fanQueue[-1][1] + (fanQueue[-1][0] << 8)
+		else:
+			fanSpeed = -1
+
+		return self.__convertToPercent(fanSpeed)
+
 
 class Probes():
 	def __init__(self):
-		self.__canListenerThread = ThreadedCanListener("can0")
-		self.__canListenerThread.start()
+		global canListener
+		global canInterface
+		if canListener is None:
+			self.__canListenerThread = ThreadedCanListener(canInterface)
+			self.__canListenerThread.start()
+		else:
+			self.__canListenerThread = canListener
 		pass
 
 
 	def getTemperaturesJSON(self, onlyEnabledSensors):
 		dataJson = []
 		for sensorNr in range(1,7):
+			sensorNr += 0x00B
 			temperature = int(self.getTemperature(sensorNr))
 			connected = self.checkIfConnected(sensorNr)
 			if ((not onlyEnabledSensors) or connected):
@@ -77,7 +146,7 @@ class Probes():
 	def __getSensorResistanceFromCan(self, sensorNr):
 		sensorQueue = self.__canListenerThread.getMessageQueue()
 		dataBytes = None
-		sensorId = sensorNr + 3
+		sensorId = sensorNr
 		if sensorId in sensorQueue.keys():
 			dataBytes = sensorQueue[sensorId][-10:]
 			sensorResistances = list(map(lambda byteArray: int.from_bytes(byteArray, byteorder="big", signed=False), dataBytes))
@@ -89,7 +158,7 @@ class Probes():
 
 
 	def getTemperature(self, sensorNr):
-		sensorId = sensorNr + 3
+		sensorId = sensorNr
 		messageQueue = self.__canListenerThread.getMessageQueue()
 		temperatures = []
 		est = -1
