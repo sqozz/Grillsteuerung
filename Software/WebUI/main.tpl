@@ -27,10 +27,10 @@
 			</div>
 		</div>
 		<div id="fanControl">
-			<span id="description">Lüfter</span>
+			<span id="description"><span>Lüfter: </span><span id="fanspeed"></span>%</span>
 			<div id="buttons">
-				<button id="up" value="up">up</button>
-				<button id="down" value="down">down</button>
+				<button id="up" value="up" onclick="javascript:incSpeed()" >up</button>
+				<button id="down" value="down" onclick="javascript:decSpeed()" >down</button>
 			</div>
 		</div>
 		<script src="main.js"></script>

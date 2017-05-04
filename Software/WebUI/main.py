@@ -6,6 +6,8 @@ import socket, fcntl, struct
 import subprocess
 import probes as probesmod
 
+# LOWEST VALUE FOR FAN: 0x00e0 ~6V
+
 global counter
 counter = 0
 
@@ -50,7 +52,11 @@ def plotly():
 
 @route("/fanspeed")
 def getFanspeed():
-	return "0"
+	global fan
+	if "speed" in request.query:
+		fan.setFanSpeed(0x0EB, request.query["speed"])
+	else:
+		return "{}".format(fan.getFanSpeed(0x0EB))
 
 @route("/temperatures.json")
 def temps():
@@ -62,6 +68,8 @@ def temps():
 def setup():
 	global probes
 	probes = probesmod.Probes()
+	global fan
+	fan = probesmod.Fan()
 
 setup()
 run(host="0.0.0.0", port=8080, debug=True, reloader=True)

@@ -1,4 +1,39 @@
 availableProbes = []
+fanSpeed = 0
+
+function updateFanSpeed(speed) {
+	fanSpeed = Math.round(speed)
+	speedContainer = document.getElementById("fanspeed")
+	speedContainer.innerHTML = fanSpeed
+}
+
+function incSpeed() {
+	sendSpeed(fanSpeed + 10)
+}
+
+function decSpeed() {
+	sendSpeed(fanSpeed - 10)
+}
+
+function sendSpeed(speed) {
+	if (speed > 100) {
+		speed = 100
+	} else if (speed < 0) {
+		speed = 0
+	}
+	fanSpeed = speed
+
+	var xhr = new XMLHttpRequest();
+	xhr.open('get', "fanspeed?speed=" + speed, true);
+	xhr.responseType = 'text';
+	xhr.onload = function() {
+		var status = xhr.status;
+		if (status != 200) {
+			console.log("HTTP-Status not 200. Got instead: " + status);
+		}
+	};
+	xhr.send();
+}
 
 function updateTemperature(newTemperature, probeNr, enabled) {
 	probeDataContainer = document.getElementById("probeDataContainer")
@@ -10,6 +45,10 @@ function updateTemperature(newTemperature, probeNr, enabled) {
 
 	if ((probeContainer != null) && enabled == true) { // update if probe exists
 		updateProbe(probeNr, newTemperature)
+	}
+
+	if ((probeContainer != null) && (enabled == false)) {
+		removeProbe(probeNr)
 	}
 
 	updateGraph(newTemperature, probeNr)
@@ -181,9 +220,25 @@ setInterval(function(){
 		if (status == 200) {
 			sensorData = xhr.response;
 			for (i=0; i < sensorData.length; i++) {
-				//updateTemperature(sensorData[i].temperature, sensorData[i].sensor, sensorData[i].connected)
-				updateProbe(sensorData[i].sensor, sensorData[i].temperature)
+				updateTemperature(sensorData[i].temperature, sensorData[i].sensor, sensorData[i].connected)
+				//updateProbe(sensorData[i].sensor, sensorData[i].temperature)
 			}
+		} else {
+			console.log("HTTP-Status not 200. Got instead: " + status);
+		}
+	};
+	xhr.send();
+}, 500);
+
+setInterval(function(){
+	var xhr = new XMLHttpRequest();
+	xhr.open('get', "fanspeed", true);
+	xhr.responseType = 'text';
+	xhr.onload = function() {
+		var status = xhr.status;
+		if (status == 200) {
+			speed = xhr.response;
+			updateFanSpeed(speed)
 		} else {
 			console.log("HTTP-Status not 200. Got instead: " + status);
 		}
