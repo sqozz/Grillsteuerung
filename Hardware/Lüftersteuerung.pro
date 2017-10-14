@@ -1,4 +1,4 @@
-update=Di 04 Okt 2016 15:02:59 CEST
+update=14.07.2017 12:10:54
 version=1
 last_client=kicad
 [pcbnew]
@@ -25,6 +25,16 @@ version=1
 NetIExt=net
 [general]
 version=1
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
 [eeschema]
 version=1
 LibDir=
@@ -63,18 +73,8 @@ LibName31=OKI-78SR-5
 LibName32=mcp45hvx1
 LibName33=Lüftersteuerung
 LibName34=mate-n-lok
-LibName35=/home/sqozz/GrillSteuerung/Hardware/Rev1/mcp3208
-LibName36=tps793
-LibName37=sub-d9
-LibName38=byteworker
-LibName39=mj-2508
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=
-SpiceForceRefPrefix=0
-SpiceUseNetNumbers=0
-LabSize=60
+LibName35=tps793
+LibName36=sub-d9
+LibName37=byteworker
+LibName38=mj-2508
+LibName39=mcp3208

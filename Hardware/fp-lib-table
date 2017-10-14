@@ -5,5 +5,4 @@
   (lib (name SSF_LXH303)(type KiCad)(uri "$(KIPRJMOD)/footprints/SSF_LXH303.pretty")(options "")(descr ""))
   (lib (name byteworker)(type KiCad)(uri "$(KIPRJMOD)/footprints/byteworker.pretty")(options "")(descr ""))
   (lib (name PTN78000H)(type KiCad)(uri "$(KIPRJMOD)/PTN78000H.pretty")(options "")(descr ""))
-  (lib (name mono_jack)(type KiCad)(uri /home/sqozz/GrillSteuerung_mess/Hardware/Rev1/mono_jack.pretty)(options "")(descr ""))
 )

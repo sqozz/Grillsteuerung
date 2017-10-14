@@ -33,11 +33,11 @@ LIBS:OKI-78SR-5
 LIBS:mcp45hvx1
 LIBS:Lüftersteuerung
 LIBS:mate-n-lok
-LIBS:mcp3208
 LIBS:tps793
 LIBS:sub-d9
 LIBS:byteworker
 LIBS:mj-2508
+LIBS:mcp3208
 LIBS:Lüftersteuerung-cache
 EELAYER 25 0
 EELAYER END
